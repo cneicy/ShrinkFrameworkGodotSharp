@@ -1,0 +1,17 @@
+<Project Sdk="Godot.NET.Sdk/4.4.1">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="CommonSDK\**" />
+    <Compile Remove="MyMod\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove="CommonSDK\**" />
+    <EmbeddedResource Remove="MyMod\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="CommonSDK\CommonSDK.csproj" />
+  </ItemGroup>
+</Project>
