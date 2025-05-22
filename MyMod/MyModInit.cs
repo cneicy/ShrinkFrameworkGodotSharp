@@ -16,6 +16,7 @@ public partial class MyModInit : ModBase<MyModInit>, IMod
     {
         GD.Print("Made by " + Author);
         GD.Print(Instance.GetType().FullName);
+        Test.Instance.Start();
     }
 
     public void Loop()
@@ -27,6 +28,6 @@ public partial class MyModInit : ModBase<MyModInit>, IMod
 
     public void Start()
     {
-        new Test().Pop();
+        GD.Print("Start");
     }
 }
