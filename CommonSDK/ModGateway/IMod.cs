@@ -1,4 +1,4 @@
-﻿namespace CommonSDK;
+﻿namespace CommonSDK.ModGateway;
 
 public interface IMod
 {

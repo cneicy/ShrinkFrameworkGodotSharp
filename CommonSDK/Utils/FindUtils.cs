@@ -1,4 +1,5 @@
 ﻿using Godot;
+
 // ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 #pragma warning disable CS8603 // 可能返回 null 引用。
 
@@ -17,19 +18,19 @@ public static class FindUtils
     }
 
     #region FindObjectOfType 系列方法
-    
+
     public static T FindObjectOfType<T>(bool includeInactive = false) where T : Node
     {
         var root = GetRoot();
         return root == null ? null : FindObjectOfTypeRecursive<T>(root, includeInactive);
     }
-    
+
     public static Node FindObjectOfType(Type type, bool includeInactive = false)
     {
         var root = GetRoot();
         return root == null ? null : FindObjectOfTypeRecursive(root, type, includeInactive);
     }
-    
+
     public static T[] FindObjectsOfType<T>(bool includeInactive = false) where T : Node
     {
         var root = GetRoot();
@@ -39,7 +40,7 @@ public static class FindUtils
         FindObjectsOfTypeRecursive<T>(root, results, includeInactive);
         return results.ToArray();
     }
-    
+
     public static Node[] FindObjectsOfType(Type type, bool includeInactive = false)
     {
         var root = GetRoot();
@@ -53,13 +54,13 @@ public static class FindUtils
     #endregion
 
     #region Find 系列方法
-    
+
     public static Node Find(string name, bool exactMatch = true, bool includeInactive = false)
     {
         var root = GetRoot();
         return root == null ? null : FindByNameRecursive(root, name, exactMatch, includeInactive);
     }
-    
+
     public static Node[] FindAll(string name, bool exactMatch = true, bool includeInactive = false)
     {
         var root = GetRoot();
@@ -69,13 +70,13 @@ public static class FindUtils
         FindAllByNameRecursive(root, name, exactMatch, includeInactive, results);
         return results.ToArray();
     }
-    
+
     public static Node FindByPath(string path)
     {
         var root = GetRoot();
         return root?.GetNode(path);
     }
-    
+
     public static T FindByPath<T>(string path) where T : Node
     {
         return FindByPath(path) as T;
@@ -84,25 +85,25 @@ public static class FindUtils
     #endregion
 
     #region FindWithGroup 系列方法
-    
+
     public static Node FindWithGroup(string group)
     {
         var sceneTree = GetSceneTree();
         return sceneTree.GetFirstNodeInGroup(group);
     }
-    
+
     public static T FindWithGroup<T>(string group) where T : Node
     {
         return FindWithGroup(group) as T;
     }
-    
+
     public static Node[] FindObjectsWithGroup(string group)
     {
         var sceneTree = GetSceneTree();
         var nodes = sceneTree?.GetNodesInGroup(group);
         return nodes?.Cast<Node>().ToArray() ?? new Node[0];
     }
-    
+
     public static T[] FindObjectsWithGroup<T>(string group) where T : Node
     {
         var nodes = FindObjectsWithGroup(group);
@@ -112,14 +113,15 @@ public static class FindUtils
     #endregion
 
     #region FindInChildren 系列方法
+
     // 此系列方法会先从传入的父节点找起
 
     public static T FindInChildren<T>(Node parent, bool includeInactive = false) where T : Node
     {
         return parent == null ? null : FindObjectOfTypeRecursive<T>(parent, includeInactive);
     }
-    
-    
+
+
     public static T[] FindAllInChildren<T>(Node parent, bool includeInactive = false) where T : Node
     {
         if (parent == null) return new T[0];
@@ -128,7 +130,7 @@ public static class FindUtils
         FindObjectsOfTypeRecursive(parent, results, includeInactive);
         return results.ToArray();
     }
-    
+
     public static Node FindInChildren(Node parent, string name, bool exactMatch = true, bool includeInactive = false)
     {
         return parent == null ? null : FindByNameRecursive(parent, name, exactMatch, includeInactive);
@@ -144,17 +146,17 @@ public static class FindUtils
         {
             return null;
         }
-        
+
         if (node is T directResult)
         {
             return directResult;
         }
-        
+
         if (HasScriptOfType<T>(node))
         {
             return node as T;
         }
-        
+
         foreach (var child in node.GetChildren())
         {
             var found = FindObjectOfTypeRecursive<T>(child, includeInactive);
@@ -170,7 +172,7 @@ public static class FindUtils
         {
             return null;
         }
-        
+
         if (type.IsInstanceOfType(node) || HasScriptOfType(node, type))
         {
             return node;
@@ -191,7 +193,7 @@ public static class FindUtils
         {
             return;
         }
-        
+
         if (node is T directResult)
         {
             results.Add(directResult);
@@ -203,7 +205,7 @@ public static class FindUtils
                 results.Add(scriptResult);
             }
         }
-        
+
         foreach (var child in node.GetChildren())
         {
             FindObjectsOfTypeRecursive<T>(child, results, includeInactive);
@@ -216,7 +218,7 @@ public static class FindUtils
         {
             return;
         }
-        
+
         if (type.IsInstanceOfType(node) || HasScriptOfType(node, type))
         {
             results.Add(node);
@@ -231,9 +233,9 @@ public static class FindUtils
     private static Node FindByNameRecursive(Node node, string name, bool exactMatch, bool includeInactive)
     {
         var nodeName = node.Name.ToString();
-        var nameMatches = exactMatch ? 
-            string.Equals(nodeName, name, StringComparison.OrdinalIgnoreCase) : 
-            nodeName.Contains(name, StringComparison.OrdinalIgnoreCase);
+        var nameMatches = exactMatch
+            ? string.Equals(nodeName, name, StringComparison.OrdinalIgnoreCase)
+            : nodeName.Contains(name, StringComparison.OrdinalIgnoreCase);
 
         if (nameMatches && (includeInactive || IsNodeActive(node)))
         {
@@ -249,12 +251,13 @@ public static class FindUtils
         return null;
     }
 
-    private static void FindAllByNameRecursive(Node node, string name, bool exactMatch, bool includeInactive, List<Node> results)
+    private static void FindAllByNameRecursive(Node node, string name, bool exactMatch, bool includeInactive,
+        List<Node> results)
     {
         var nodeName = node.Name.ToString();
-        var nameMatches = exactMatch ? 
-            string.Equals(nodeName, name, StringComparison.OrdinalIgnoreCase) : 
-            nodeName.Contains(name, StringComparison.OrdinalIgnoreCase);
+        var nameMatches = exactMatch
+            ? string.Equals(nodeName, name, StringComparison.OrdinalIgnoreCase)
+            : nodeName.Contains(name, StringComparison.OrdinalIgnoreCase);
 
         if (nameMatches && (includeInactive || IsNodeActive(node)))
         {
@@ -266,7 +269,7 @@ public static class FindUtils
             FindAllByNameRecursive(child, name, exactMatch, includeInactive, results);
         }
     }
-    
+
     private static bool IsNodeActive(Node node)
     {
         if (node.ProcessMode == Node.ProcessModeEnum.Disabled)
@@ -278,7 +281,7 @@ public static class FindUtils
             _ => true
         };
     }
-    
+
     private static bool HasScriptOfType<T>(Node node) where T : Node
     {
         try
@@ -289,7 +292,7 @@ public static class FindUtils
             {
                 return true;
             }
-            
+
             var script = node.GetScript();
             if (script.VariantType != Variant.Type.Nil)
             {
@@ -314,7 +317,7 @@ public static class FindUtils
 
         return false;
     }
-    
+
     private static string GetScriptTypeName(CSharpScript script)
     {
         try
@@ -333,14 +336,14 @@ public static class FindUtils
 
         return string.Empty;
     }
-    
+
     private static bool IsScriptDerivedFrom<T>(Node node, CSharpScript script) where T : Node
     {
         try
         {
             var targetType = typeof(T);
             var nodeType = node.GetType();
-            
+
             return targetType.IsAssignableFrom(nodeType);
         }
         catch
@@ -348,18 +351,18 @@ public static class FindUtils
             return false;
         }
     }
-    
+
     private static bool HasScriptOfType(Node node, Type targetType)
     {
         try
         {
             var nodeType = node.GetType();
-            
+
             if (targetType.IsAssignableFrom(nodeType))
             {
                 return true;
             }
-            
+
             var script = node.GetScript();
             if (script.VariantType != Variant.Type.Nil)
             {
@@ -388,22 +391,22 @@ public static class FindUtils
     #endregion
 
     #region 便捷方法
-    
+
     public static Node[] GetAllActiveNodes()
     {
         return FindObjectsOfType<Node>(includeInactive: false);
     }
-    
+
     public static Node[] GetAllNodes()
     {
         return FindObjectsOfType<Node>(includeInactive: true);
     }
-    
+
     public static int CountObjectsOfType<T>(bool includeInactive = false) where T : Node
     {
         return FindObjectsOfType<T>(includeInactive).Length;
     }
-    
+
     public static bool HasObjectOfType<T>(bool includeInactive = false) where T : Node
     {
         return FindObjectOfType<T>(includeInactive) != null;

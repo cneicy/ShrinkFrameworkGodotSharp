@@ -1,6 +1,6 @@
 using Godot;
 
-namespace CommonSDK;
+namespace CommonSDK.ModGateway;
 
 public abstract partial class ModBase<T> : Node where T : Node, new()
 {

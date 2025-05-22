@@ -1,4 +1,4 @@
-﻿using CommonSDK;
+﻿using CommonSDK.ModGateway;
 using Godot;
 
 namespace MyMod;
@@ -16,7 +16,6 @@ public partial class MyModInit : ModBase<MyModInit>, IMod
     {
         GD.Print("Made by " + Author);
         GD.Print(Instance.GetType().FullName);
-        Test.Instance.Start();
     }
 
     public void Loop()
