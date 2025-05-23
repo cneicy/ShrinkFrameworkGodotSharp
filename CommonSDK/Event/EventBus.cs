@@ -67,8 +67,7 @@ public partial class EventBus : Singleton<EventBus>
 
     public void CancelEvent(string eventName)
     {
-        if (!_eventHandlers.ContainsKey(eventName)) return;
-        _eventHandlers.Remove(eventName);
+        if (!_eventHandlers.Remove(eventName)) return;
         if (OS.IsDebugBuild())
         {
             GD.Print($"事件 {eventName} 已被取消 (所有处理程序已移除)。");
