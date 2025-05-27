@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
+using CommonSDK.Logger;
 using CommonSDK.ModGateway;
 using Godot;
 
@@ -11,6 +12,7 @@ namespace ShrinkFrameworkGodotSharp;
 public partial class ModLoader : Node
 {
     private static readonly List<IMod> ModInstances = [];
+    private static readonly LogHelper Logger = new("ModLoader");
 
     public override void _Process(double delta)
     {
@@ -23,24 +25,24 @@ public partial class ModLoader : Node
 
     public override void _Ready()
     {
-        GD.Print("正在开始加载模组");
+        Logger.LogInfo("正在开始加载模组");
         LoadMods();
     }
 
     private static void LoadMods()
     {
         var modsDir = OS.GetUserDataDir() + "/mods/";
-        GD.Print("模组文件夹路径: " + modsDir);
+        Logger.LogInfo("模组文件夹路径: " + modsDir);
 
         if (Directory.Exists(modsDir))
         {
-            GD.Print("模组文件夹存在");
+            Logger.LogInfo("模组文件夹存在");
             var dllFiles = Directory.GetFiles(modsDir, "*.dll");
-            GD.Print("找到库文件共: " + dllFiles.Length);
+            Logger.LogInfo("找到库文件共: " + dllFiles.Length);
 
             foreach (var dllFile in dllFiles)
             {
-                GD.Print("加载模组库文件: " + dllFile);
+                Logger.LogInfo("加载模组库文件: " + dllFile);
 
                 var alc = AssemblyLoadContext.GetLoadContext(Assembly.GetExecutingAssembly());
                 if (alc == null) continue;
@@ -61,7 +63,7 @@ public partial class ModLoader : Node
 
                     if (instanceProp == null)
                     {
-                        GD.PrintErr($"找不到Instance属性: {type.FullName}");
+                        Logger.LogError($"找不到Instance属性: {type.FullName}");
                         continue;
                     }
 
@@ -69,18 +71,18 @@ public partial class ModLoader : Node
                     {
                         ModInstances.Add(modInstance);
                         modInstance.Init();
-                        GD.Print($"成功加载Mod: {type.FullName}");
+                        Logger.LogInfo($"成功加载Mod: {type.FullName}");
                     }
                     else
                     {
-                        GD.PrintErr($"实例化失败: {type.FullName}");
+                        Logger.LogError($"实例化失败: {type.FullName}");
                     }
                 }
             }
         }
         else
         {
-            GD.Print($"模组文件夹未找到: {modsDir}");
+            Logger.LogInfo($"模组文件夹未找到: {modsDir}");
         }
     }
 

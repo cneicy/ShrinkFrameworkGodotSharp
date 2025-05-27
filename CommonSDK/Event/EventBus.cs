@@ -1,5 +1,7 @@
 ﻿using System.Reflection;
+using CommonSDK.Logger;
 using Godot;
+// ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 
 
 namespace CommonSDK.Event;
@@ -7,7 +9,7 @@ namespace CommonSDK.Event;
 public partial class EventBus : Singleton<EventBus>
 {
     private readonly Dictionary<string, Delegate> _eventHandlers = new();
-
+    private readonly LogHelper _logger = new LogHelper("EventBus");
     public void RegisterEvent<T>(string eventName, Func<T, object> handler)
     {
         if (!_eventHandlers.TryAdd(eventName, handler))
@@ -47,7 +49,7 @@ public partial class EventBus : Singleton<EventBus>
                 {
                     if (OS.IsDebugBuild())
                     {
-                        GD.PrintErr($"执行事件 {eventName} 时发生异常: {ex}");
+                        _logger.LogError($"执行事件 {eventName} 时发生异常: {ex}");
                     }
                 }
             }
@@ -55,7 +57,7 @@ public partial class EventBus : Singleton<EventBus>
             {
                 if (OS.IsDebugBuild())
                 {
-                    GD.PrintErr(
+                    _logger.LogError(
                         $"事件 {eventName} 的处理程序类型不匹配。预期 Func<{typeof(T).Name}, object>，实际为 {handler.GetType().Name}");
                 }
             }
@@ -70,7 +72,7 @@ public partial class EventBus : Singleton<EventBus>
         if (!_eventHandlers.Remove(eventName)) return;
         if (OS.IsDebugBuild())
         {
-            GD.Print($"事件 {eventName} 已被取消 (所有处理程序已移除)。");
+            _logger.LogInfo($"事件 {eventName} 已被取消 (所有处理程序已移除)。");
         }
     }
 
@@ -80,7 +82,7 @@ public partial class EventBus : Singleton<EventBus>
         {
             if (OS.IsDebugBuild())
             {
-                GD.Print("目标对象为 null，无法取消订阅。");
+                _logger.LogInfo("目标对象为 null，无法取消订阅。");
             }
 
             return;
@@ -119,7 +121,7 @@ public partial class EventBus : Singleton<EventBus>
 
         if (OS.IsDebugBuild())
         {
-            GD.Print($"已为 {targetObject} 注销所有相关事件订阅。");
+            _logger.LogInfo($"已为 {targetObject} 注销所有相关事件订阅。");
         }
     }
 
@@ -128,7 +130,7 @@ public partial class EventBus : Singleton<EventBus>
         _eventHandlers.Clear();
         if (OS.IsDebugBuild())
         {
-            GD.Print("所有事件订阅已被注销。");
+            _logger.LogInfo("所有事件订阅已被注销。");
         }
     }
 
@@ -136,7 +138,7 @@ public partial class EventBus : Singleton<EventBus>
     {
         if (target == null)
         {
-            if (OS.IsDebugBuild()) GD.PrintErr("RegisterEventHandlersFromAttributes: 目标对象为 null。");
+            if (OS.IsDebugBuild()) _logger.LogError("RegisterEventHandlersFromAttributes: 目标对象为 null。");
             return;
         }
 
@@ -156,7 +158,7 @@ public partial class EventBus : Singleton<EventBus>
                 if (parameters.Length != 1)
                 {
                     if (OS.IsDebugBuild())
-                        GD.PrintErr(
+                        _logger.LogError(
                             $"方法 {method.Name} 在类 {target.GetType().Name} 中带有 EventSubscribeAttribute，但参数数量不为1。");
                     continue;
                 }
@@ -164,7 +166,7 @@ public partial class EventBus : Singleton<EventBus>
                 if (method.ReturnType != typeof(object))
                 {
                     if (OS.IsDebugBuild())
-                        GD.PrintErr(
+                        _logger.LogError(
                             $"方法 {method.Name} 在类 {target.GetType().Name} 中带有 EventSubscribeAttribute，但返回类型不是 object。");
                     continue;
                 }
@@ -182,11 +184,11 @@ public partial class EventBus : Singleton<EventBus>
                         _eventHandlers[eventName] = Delegate.Combine(_eventHandlers[eventName], handlerDelegate);
                     }
 
-                    if (OS.IsDebugBuild()) GD.Print($"自动注册事件: {eventName} -> {target.GetType().Name}.{method.Name}");
+                    if (OS.IsDebugBuild()) _logger.LogInfo($"自动注册事件: {eventName} -> {target.GetType().Name}.{method.Name}");
                 }
                 catch (Exception ex)
                 {
-                    if (OS.IsDebugBuild()) GD.PrintErr($"为事件 {eventName} 创建委托给方法 {method.Name} 失败: {ex}");
+                    if (OS.IsDebugBuild()) _logger.LogError($"为事件 {eventName} 创建委托给方法 {method.Name} 失败: {ex}");
                 }
             }
         }
@@ -200,7 +202,7 @@ public class EventSubscribeAttribute : Attribute
     {
         if (string.IsNullOrWhiteSpace(eventName))
         {
-            throw new ArgumentException("Event name cannot be null or whitespace.", nameof(eventName));
+            throw new ArgumentException("事件名不能为空或空格", nameof(eventName));
         }
 
         EventName = eventName;

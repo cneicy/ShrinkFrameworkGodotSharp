@@ -1,4 +1,5 @@
-﻿using CommonSDK.Utils;
+﻿using CommonSDK.Logger;
+using CommonSDK.Utils;
 using Godot;
 
 // ReSharper disable StaticMemberInGenericType
@@ -12,7 +13,7 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
     private static T _instance;
     private static readonly object Lock = new();
     private static bool _isQuitting;
-
+    private static readonly LogHelper LogHelper = new($"Singleton Of {typeof(T).Name}");
     public static T Instance
     {
         get
@@ -37,7 +38,7 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
         var mainLoop = Engine.GetMainLoop();
         if (mainLoop is not SceneTree sceneTree)
         {
-            GD.PrintErr($"[单例] {typeof(T).Name}创建失败: 场景树不可用");
+            LogHelper.LogError($"{typeof(T).Name}创建失败: 场景树不可用");
             return;
         }
 
@@ -45,7 +46,7 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
         if (existingInstance != null)
         {
             _instance = existingInstance;
-            GD.Print($"[单例] {typeof(T).Name} 找到现有实例，路径为{_instance.GetPath()}");
+            LogHelper.LogInfo($"{typeof(T).Name} 找到现有实例，路径为{_instance.GetPath()}");
             return;
         }
 
@@ -53,7 +54,7 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
         if (groupInstance != null)
         {
             _instance = groupInstance;
-            GD.Print($"[单例] {typeof(T).Name} 通过组找到现有实例，路径为{_instance.GetPath()}");
+            LogHelper.LogInfo($"{typeof(T).Name} 通过组找到现有实例，路径为{_instance.GetPath()}");
             return;
         }
 
@@ -61,7 +62,7 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
 
         if (_instance == null)
         {
-            GD.PrintErr($"[单例] {typeof(T).Name} 创建失败");
+            LogHelper.LogError($"{typeof(T).Name} 创建失败");
             return;
         }
 
@@ -82,7 +83,7 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
             var scene = GD.Load<PackedScene>(scenePath);
             if (scene.Instantiate() is T instance)
             {
-                GD.Print($"[单例] {typeof(T).Name} 从场景文件创建");
+                LogHelper.LogInfo($"{typeof(T).Name} 从场景文件创建");
                 return instance;
             }
         }
@@ -96,18 +97,18 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
             var instance = node as T;
             if (instance != null)
             {
-                GD.Print($"[单例] {typeof(T).Name} 通过脚本创建");
+                LogHelper.LogInfo($"{typeof(T).Name} 通过脚本创建");
                 return instance;
             }
         }
 
-        GD.Print($"[单例] {typeof(T).Name} 直接创建（可能缺少脚本）");
+        LogHelper.LogInfo($"{typeof(T).Name} 直接创建（可能缺少脚本）");
         return new T();
     }
 
     private void PrintInstancePath()
     {
-        GD.Print($"[单例] {typeof(T).Name} 实例已经创建并添加到场景树，路径为{GetPath()}");
+        LogHelper.LogInfo($"{typeof(T).Name} 实例已经创建并添加到场景树，路径为{GetPath()}");
     }
 
     public override void _Ready()
@@ -117,11 +118,11 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
             _instance = (T)this;
             AddToGroup($"singleton_{typeof(T).Name}");
             ProcessMode = ProcessModeEnum.Always;
-            GD.Print($"[单例] {typeof(T).Name} 已经从场景实例化");
+            LogHelper.LogInfo($"{typeof(T).Name} 已经从场景实例化");
         }
         else if (_instance != this)
         {
-            GD.PrintErr($"[单例] {typeof(T).Name} 实例已存在，正在销毁");
+            LogHelper.LogError($"{typeof(T).Name} 实例已存在，正在销毁");
             QueueFree();
             return;
         }
@@ -135,7 +136,7 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
         OnSingletonDestroy();
         _isQuitting = true;
         _instance = null;
-        GD.Print($"[单例] {typeof(T).Name} 实例已销毁");
+        LogHelper.LogInfo($"{typeof(T).Name} 实例已销毁");
     }
 
     protected virtual void OnSingletonReady()

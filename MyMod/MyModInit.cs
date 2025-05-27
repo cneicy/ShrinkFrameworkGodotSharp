@@ -1,4 +1,5 @@
-﻿using CommonSDK.ModGateway;
+﻿using CommonSDK.Logger;
+using CommonSDK.ModGateway;
 using Godot;
 
 namespace MyMod;
@@ -9,24 +10,23 @@ public partial class MyModInit : ModBase<MyModInit>, IMod
 
     public MyModInit()
     {
-        Author = "Eicy";
+        ModId = "MyMod";
     }
-
     public void Init()
     {
-        GD.Print("Made by " + Author);
-        GD.Print(Instance.GetType().FullName);
+        Logger.Log(LogType.Info,"11514");
+        Logger.LogInfo(Instance.GetType().FullName);
     }
 
     public void Loop()
     {
         if (LoopTime <= 0) return;
-        GD.Print("Loop");
+        Logger.LogInfo("Loop");
         LoopTime--;
     }
 
     public void Start()
     {
-        GD.Print("Start");
+        Logger.LogInfo("Start");
     }
 }
