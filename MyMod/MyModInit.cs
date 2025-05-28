@@ -1,21 +1,25 @@
-﻿using CommonSDK.Logger;
-using CommonSDK.ModGateway;
-using Godot;
+﻿using CommonSDK.ModGateway;
 
 namespace MyMod;
 
 public partial class MyModInit : ModBase<MyModInit>, IMod
 {
     public int LoopTime = 5;
-
-    public MyModInit()
+    
+    public override void _Ready()
     {
-        ModId = "MyMod";
+        // 使用元数据初始化后的属性
+        Logger.LogInfo($"Mod loaded: {ModId} v{Version}");
     }
+
     public void Init()
     {
-        Logger.Log(LogType.Info,"11514");
-        Logger.LogInfo(Instance.GetType().FullName);
+        Logger.LogInfo("Initializing mod...");
+    }
+
+    public void Start()
+    {
+        Logger.LogInfo("Mod started");
     }
 
     public void Loop()
@@ -23,10 +27,5 @@ public partial class MyModInit : ModBase<MyModInit>, IMod
         if (LoopTime <= 0) return;
         Logger.LogInfo("Loop");
         LoopTime--;
-    }
-
-    public void Start()
-    {
-        Logger.LogInfo("Start");
     }
 }

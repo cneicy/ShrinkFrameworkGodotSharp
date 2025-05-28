@@ -7,13 +7,13 @@ using Godot;
 
 namespace CommonSDK.ModGateway;
 
-public abstract partial class ModBase<T> : Node where T : Node,IMod,new()
+public abstract partial class ModBase<T> : Node where T : Node, IMod, new()
 {
-
-    public static string ModId;
-    public static string Description;
-    public static string Version;
-    public static string[] Author;
+    public string ModId { get; set; }
+    public string Description { get; set; }
+    public string Version { get; set; }
+    public string[] Author { get; set; }
+    
     public static T Instance { get; } = new();
-    public static readonly LogHelper Logger = new(ModId ?? "NotDefined");
+    public LogHelper Logger => new(ModId);
 }
