@@ -1,12 +1,18 @@
-﻿using Godot;
+﻿using CommonSDK.Logger;
+using Godot;
 
 // ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 #pragma warning disable CS8603 // 可能返回 null 引用。
 
 namespace CommonSDK.Utils;
 
+/// <summary>
+/// 查找工具类
+/// <para>提供在场景树中查找节点的各种方法</para>
+/// </summary>
 public static class FindUtils
 {
+    private static readonly LogHelper Logger = new("FindUtils");
     private static SceneTree GetSceneTree()
     {
         return Engine.GetMainLoop() as SceneTree;
@@ -19,18 +25,36 @@ public static class FindUtils
 
     #region FindObjectOfType 系列方法
 
+    /// <summary>
+    /// 查找场景树中第一个指定类型的对象
+    /// </summary>
+    /// <typeparam name="T">要查找的对象类型</typeparam>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的对象，如果没有则返回null</returns>
     public static T FindObjectOfType<T>(bool includeInactive = false) where T : Node
     {
         var root = GetRoot();
         return root == null ? null : FindObjectOfTypeRecursive<T>(root, includeInactive);
     }
 
+    /// <summary>
+    /// 查找场景树中第一个指定类型的对象
+    /// </summary>
+    /// <param name="type">要查找的对象类型</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的对象，如果没有则返回null</returns>
     public static Node FindObjectOfType(Type type, bool includeInactive = false)
     {
         var root = GetRoot();
         return root == null ? null : FindObjectOfTypeRecursive(root, type, includeInactive);
     }
 
+    /// <summary>
+    /// 查找场景树中所有指定类型的对象
+    /// </summary>
+    /// <typeparam name="T">要查找的对象类型</typeparam>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的对象数组</returns>
     public static T[] FindObjectsOfType<T>(bool includeInactive = false) where T : Node
     {
         var root = GetRoot();
@@ -41,6 +65,12 @@ public static class FindUtils
         return results.ToArray();
     }
 
+    /// <summary>
+    /// 查找场景树中所有指定类型的对象
+    /// </summary>
+    /// <param name="type">要查找的对象类型</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的对象数组</returns>
     public static Node[] FindObjectsOfType(Type type, bool includeInactive = false)
     {
         var root = GetRoot();
@@ -55,12 +85,26 @@ public static class FindUtils
 
     #region Find 系列方法
 
+    /// <summary>
+    /// 根据名称查找第一个节点
+    /// </summary>
+    /// <param name="name">要查找的节点名称</param>
+    /// <param name="exactMatch">是否进行精确匹配</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的节点，如果没有则返回null</returns>
     public static Node Find(string name, bool exactMatch = true, bool includeInactive = false)
     {
         var root = GetRoot();
         return root == null ? null : FindByNameRecursive(root, name, exactMatch, includeInactive);
     }
 
+    /// <summary>
+    /// 根据名称查找所有节点
+    /// </summary>
+    /// <param name="name">要查找的节点名称</param>
+    /// <param name="exactMatch">是否进行精确匹配</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的节点数组</returns>
     public static Node[] FindAll(string name, bool exactMatch = true, bool includeInactive = false)
     {
         var root = GetRoot();
@@ -71,12 +115,23 @@ public static class FindUtils
         return results.ToArray();
     }
 
+    /// <summary>
+    /// 根据路径查找节点
+    /// </summary>
+    /// <param name="path">节点路径</param>
+    /// <returns>找到的节点，如果没有则返回null</returns>
     public static Node FindByPath(string path)
     {
         var root = GetRoot();
         return root?.GetNode(path);
     }
 
+    /// <summary>
+    /// 根据路径查找指定类型的节点
+    /// </summary>
+    /// <typeparam name="T">要查找的节点类型</typeparam>
+    /// <param name="path">节点路径</param>
+    /// <returns>找到的节点，如果没有则返回null</returns>
     public static T FindByPath<T>(string path) where T : Node
     {
         return FindByPath(path) as T;
@@ -86,17 +141,33 @@ public static class FindUtils
 
     #region FindWithGroup 系列方法
 
+    /// <summary>
+    /// 根据组名查找第一个节点
+    /// </summary>
+    /// <param name="group">组名</param>
+    /// <returns>找到的节点，如果没有则返回null</returns>
     public static Node FindWithGroup(string group)
     {
         var sceneTree = GetSceneTree();
         return sceneTree.GetFirstNodeInGroup(group);
     }
 
+    /// <summary>
+    /// 根据组名查找第一个指定类型的节点
+    /// </summary>
+    /// <typeparam name="T">要查找的节点类型</typeparam>
+    /// <param name="group">组名</param>
+    /// <returns>找到的节点，如果没有则返回null</returns>
     public static T FindWithGroup<T>(string group) where T : Node
     {
         return FindWithGroup(group) as T;
     }
 
+    /// <summary>
+    /// 根据组名查找所有节点
+    /// </summary>
+    /// <param name="group">组名</param>
+    /// <returns>找到的节点数组</returns>
     public static Node[] FindObjectsWithGroup(string group)
     {
         var sceneTree = GetSceneTree();
@@ -104,6 +175,12 @@ public static class FindUtils
         return nodes?.Cast<Node>().ToArray() ?? new Node[0];
     }
 
+    /// <summary>
+    /// 根据组名查找所有指定类型的节点
+    /// </summary>
+    /// <typeparam name="T">要查找的节点类型</typeparam>
+    /// <param name="group">组名</param>
+    /// <returns>找到的节点数组</returns>
     public static T[] FindObjectsWithGroup<T>(string group) where T : Node
     {
         var nodes = FindObjectsWithGroup(group);
@@ -116,12 +193,25 @@ public static class FindUtils
 
     // 此系列方法会先从传入的父节点找起
 
+    /// <summary>
+    /// 在父节点的子节点中查找第一个指定类型的节点
+    /// </summary>
+    /// <typeparam name="T">要查找的节点类型</typeparam>
+    /// <param name="parent">父节点</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的节点，如果没有则返回null</returns>
     public static T FindInChildren<T>(Node parent, bool includeInactive = false) where T : Node
     {
         return parent == null ? null : FindObjectOfTypeRecursive<T>(parent, includeInactive);
     }
 
-
+    /// <summary>
+    /// 在父节点的子节点中查找所有指定类型的节点
+    /// </summary>
+    /// <typeparam name="T">要查找的节点类型</typeparam>
+    /// <param name="parent">父节点</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的节点数组</returns>
     public static T[] FindAllInChildren<T>(Node parent, bool includeInactive = false) where T : Node
     {
         if (parent == null) return new T[0];
@@ -131,6 +221,14 @@ public static class FindUtils
         return results.ToArray();
     }
 
+    /// <summary>
+    /// 在父节点的子节点中查找第一个指定名称的节点
+    /// </summary>
+    /// <param name="parent">父节点</param>
+    /// <param name="name">要查找的节点名称</param>
+    /// <param name="exactMatch">是否进行精确匹配</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的节点，如果没有则返回null</returns>
     public static Node FindInChildren(Node parent, string name, bool exactMatch = true, bool includeInactive = false)
     {
         return parent == null ? null : FindByNameRecursive(parent, name, exactMatch, includeInactive);
@@ -312,7 +410,7 @@ public static class FindUtils
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"检查脚本类型时出错: {ex.Message}");
+            Logger.LogError($"检查脚本类型时出错: {ex.Message}");
         }
 
         return false;
@@ -382,7 +480,7 @@ public static class FindUtils
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"检查脚本类型时出错: {ex.Message}");
+            Logger.LogError($"检查脚本类型时出错: {ex.Message}");
         }
 
         return false;
@@ -392,21 +490,41 @@ public static class FindUtils
 
     #region 便捷方法
 
+    /// <summary>
+    /// 获取所有激活的节点
+    /// </summary>
+    /// <returns>激活的节点数组</returns>
     public static Node[] GetAllActiveNodes()
     {
         return FindObjectsOfType<Node>(includeInactive: false);
     }
 
+    /// <summary>
+    /// 获取所有节点
+    /// </summary>
+    /// <returns>节点数组</returns>
     public static Node[] GetAllNodes()
     {
         return FindObjectsOfType<Node>(includeInactive: true);
     }
 
+    /// <summary>
+    /// 计算指定类型的对象数量
+    /// </summary>
+    /// <typeparam name="T">要计算的对象类型</typeparam>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>对象数量</returns>
     public static int CountObjectsOfType<T>(bool includeInactive = false) where T : Node
     {
         return FindObjectsOfType<T>(includeInactive).Length;
     }
 
+    /// <summary>
+    /// 检查场景树中是否存在指定类型的对象
+    /// </summary>
+    /// <typeparam name="T">要检查的对象类型</typeparam>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>如果存在则返回true，否则返回false</returns>
     public static bool HasObjectOfType<T>(bool includeInactive = false) where T : Node
     {
         return FindObjectOfType<T>(includeInactive) != null;

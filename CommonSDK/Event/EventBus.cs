@@ -1,21 +1,49 @@
 ﻿using System.Reflection;
 using CommonSDK.Logger;
 using Godot;
+
 // ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 
 
 namespace CommonSDK.Event;
 
+/// <summary>
+/// 事件总线系统
+/// <para>提供基于事件名称的发布-订阅模式实现</para>
+/// <para>支持类型安全的事件处理和自动注册基于特性的事件处理程序</para>
+/// </summary>
 public partial class EventBus : Singleton<EventBus>
 {
+    /// <summary>
+    /// 存储所有已注册的事件处理程序
+    /// </summary>
     private readonly Dictionary<string, Delegate> _eventHandlers = new();
+
+    /// <summary>
+    /// 日志记录器
+    /// </summary>
     private readonly LogHelper _logger = new LogHelper("EventBus");
+
+    /// <summary>
+    /// 注册事件处理程序
+    /// <para>如果事件已存在处理程序，则将新处理程序与现有处理程序组合</para>
+    /// </summary>
+    /// <typeparam name="T">事件参数类型</typeparam>
+    /// <param name="eventName">事件名称</param>
+    /// <param name="handler">事件处理程序</param>
     public void RegisterEvent<T>(string eventName, Func<T, object> handler)
     {
         if (!_eventHandlers.TryAdd(eventName, handler))
             _eventHandlers[eventName] = Delegate.Combine(_eventHandlers[eventName], handler);
     }
 
+    /// <summary>
+    /// 注销事件处理程序
+    /// <para>如果移除后没有处理程序，则完全移除该事件</para>
+    /// </summary>
+    /// <typeparam name="T">事件参数类型</typeparam>
+    /// <param name="eventName">事件名称</param>
+    /// <param name="handler">要注销的事件处理程序</param>
     public void UnregisterEvent<T>(string eventName, Func<T, object> handler)
     {
         if (!_eventHandlers.TryGetValue(eventName, out Delegate existingHandler)) return;
@@ -30,6 +58,15 @@ public partial class EventBus : Singleton<EventBus>
         }
     }
 
+    /// <summary>
+    /// 触发指定事件
+    /// <para>调用所有注册到该事件的处理程序，并收集返回结果</para>
+    /// <para>如果处理程序执行过程中出现异常，将被捕获并记录（仅在调试模式）</para>
+    /// </summary>
+    /// <typeparam name="T">事件参数类型</typeparam>
+    /// <param name="eventName">事件名称</param>
+    /// <param name="args">事件参数</param>
+    /// <returns>所有处理程序的返回值列表</returns>
     public List<object> TriggerEvent<T>(string eventName, T args)
     {
         if (!_eventHandlers.TryGetValue(eventName, out var eventHandlerDelegate))
@@ -66,7 +103,10 @@ public partial class EventBus : Singleton<EventBus>
         return results;
     }
 
-
+    /// <summary>
+    /// 取消指定事件（移除所有处理程序）
+    /// </summary>
+    /// <param name="eventName">要取消的事件名称</param>
     public void CancelEvent(string eventName)
     {
         if (!_eventHandlers.Remove(eventName)) return;
@@ -76,6 +116,11 @@ public partial class EventBus : Singleton<EventBus>
         }
     }
 
+    /// <summary>
+    /// 注销指定对象的所有事件处理程序
+    /// <para>用于在对象销毁前清理其所有事件订阅</para>
+    /// </summary>
+    /// <param name="targetObject">目标对象</param>
     public void UnregisterAllEventsForObject(object targetObject)
     {
         if (targetObject is null)
@@ -125,6 +170,10 @@ public partial class EventBus : Singleton<EventBus>
         }
     }
 
+    /// <summary>
+    /// 注销所有事件处理程序
+    /// <para>完全清空事件总线</para>
+    /// </summary>
     public void UnregisterAllEvents()
     {
         _eventHandlers.Clear();
@@ -134,6 +183,12 @@ public partial class EventBus : Singleton<EventBus>
         }
     }
 
+    /// <summary>
+    /// 从目标对象中自动注册带有特性标记的事件处理程序
+    /// <para>扫描对象的所有方法，查找带有 EventSubscribeAttribute 特性的方法</para>
+    /// <para>符合条件的方法必须有一个参数且返回类型为 object</para>
+    /// </summary>
+    /// <param name="target">包含事件处理程序的目标对象</param>
     public void RegisterEventHandlersFromAttributes(object target)
     {
         if (target == null)
@@ -184,7 +239,8 @@ public partial class EventBus : Singleton<EventBus>
                         _eventHandlers[eventName] = Delegate.Combine(_eventHandlers[eventName], handlerDelegate);
                     }
 
-                    if (OS.IsDebugBuild()) _logger.LogInfo($"自动注册事件: {eventName} -> {target.GetType().Name}.{method.Name}");
+                    if (OS.IsDebugBuild())
+                        _logger.LogInfo($"自动注册事件: {eventName} -> {target.GetType().Name}.{method.Name}");
                 }
                 catch (Exception ex)
                 {
@@ -195,9 +251,19 @@ public partial class EventBus : Singleton<EventBus>
     }
 }
 
+/// <summary>
+/// 事件订阅特性
+/// <para>用于标记方法作为特定事件的处理程序</para>
+/// <para>被标记的方法必须有一个参数且返回类型为 object</para>
+/// </summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
 public class EventSubscribeAttribute : Attribute
 {
+    /// <summary>
+    /// 创建新的事件订阅特性
+    /// </summary>
+    /// <param name="eventName">要订阅的事件名称</param>
+    /// <exception cref="ArgumentException">当事件名称为空或仅包含空格时抛出</exception>
     public EventSubscribeAttribute(string eventName)
     {
         if (string.IsNullOrWhiteSpace(eventName))
@@ -208,5 +274,8 @@ public class EventSubscribeAttribute : Attribute
         EventName = eventName;
     }
 
+    /// <summary>
+    /// 获取事件名称
+    /// </summary>
     public string EventName { get; }
 }

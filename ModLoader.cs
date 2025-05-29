@@ -10,12 +10,20 @@ using Godot;
 
 namespace ShrinkFrameworkGodotSharp;
 
+/// <summary>
+/// 模组加载器类
+/// <para>负责加载和管理Godot引擎中的模组，包括PCK文件、场景文件和模组DLL</para>
+/// </summary>
 public partial class ModLoader : Node
 {
     private static readonly List<IMod> ModInstances = [];
     private static readonly Dictionary<string, ModMetadata> ModMetadata = new();
     private static readonly LogHelper Logger = new("ModLoader");
-    
+
+    /// <summary>
+    /// 每帧处理方法
+    /// </summary>
+    /// <param name="delta">帧时间间隔</param>
     public override void _Process(double delta)
     {
         base._Process(delta);
@@ -25,12 +33,20 @@ public partial class ModLoader : Node
         }
     }
 
+    /// <summary>
+    /// 节点准备就绪时调用
+    /// <para>初始化模组加载器并开始加载模组</para>
+    /// </summary>
     public override void _Ready()
     {
         Logger.LogInfo("正在开始加载模组");
         LoadMods();
     }
 
+    /// <summary>
+    /// 加载所有模组
+    /// <para>从用户数据目录下的mods文件夹加载模组资源</para>
+    /// </summary>
     private void LoadMods()
     {
         var modsDir = OS.GetUserDataDir() + "/mods/";
@@ -42,18 +58,22 @@ public partial class ModLoader : Node
             Directory.CreateDirectory(modsDir);
             return;
         }
-        
+
         LoadPckFiles(modsDir);
-        
+
         var mods = LoadModMetadata(modsDir);
         mods.Sort((a, b) => a.LoadOrder.CompareTo(b.LoadOrder));
-        
+
         foreach (var mod in mods)
         {
             LoadModAssembly(mod);
         }
     }
 
+    /// <summary>
+    /// 加载PCK文件
+    /// </summary>
+    /// <param name="modsDir">模组目录路径</param>
     private static void LoadPckFiles(string modsDir)
     {
         var pckFiles = Directory.GetFiles(modsDir, "*.pck");
@@ -79,6 +99,11 @@ public partial class ModLoader : Node
         }
     }
 
+    /// <summary>
+    /// 加载模组元数据
+    /// </summary>
+    /// <param name="modsDir">模组目录路径</param>
+    /// <returns>模组元数据列表</returns>
     private static List<ModMetadata> LoadModMetadata(string modsDir)
     {
         var mods = new List<ModMetadata>();
@@ -93,17 +118,17 @@ public partial class ModLoader : Node
             {
                 var json = File.ReadAllText(metadataPath);
                 var metadata = JsonSerializer.Deserialize<ModMetadata>(json);
-                
+
                 if (string.IsNullOrEmpty(metadata.Id))
                 {
                     Logger.LogError($"无效的模组元数据: {metadataPath} - 缺少ID");
                     continue;
                 }
-                
+
                 metadata.Directory = modDir;
                 ModMetadata[metadata.Id] = metadata;
                 mods.Add(metadata);
-                
+
                 Logger.LogInfo($"已加载元数据: {metadata.Id} v{metadata.Version}");
             }
             catch (Exception ex)
@@ -115,6 +140,10 @@ public partial class ModLoader : Node
         return mods;
     }
 
+    /// <summary>
+    /// 加载模组程序集
+    /// </summary>
+    /// <param name="metadata">模组元数据</param>
     private void LoadModAssembly(ModMetadata metadata)
     {
         var dllFiles = Directory.GetFiles(metadata.Directory, "*.dll");
@@ -125,7 +154,7 @@ public partial class ModLoader : Node
         }
 
         Logger.LogInfo($"加载模组: {metadata.Id}");
-        
+
         LoadModScenes(metadata);
 
         foreach (var dllFile in dllFiles)
@@ -133,7 +162,7 @@ public partial class ModLoader : Node
             try
             {
                 Logger.LogInfo($"加载模组库: {Path.GetFileName(dllFile)}");
-                
+
                 var alc = AssemblyLoadContext.GetLoadContext(Assembly.GetExecutingAssembly());
                 if (alc == null) continue;
 
@@ -147,6 +176,10 @@ public partial class ModLoader : Node
         }
     }
 
+    /// <summary>
+    /// 加载模组场景文件
+    /// </summary>
+    /// <param name="metadata">模组元数据</param>
     private void LoadModScenes(ModMetadata metadata)
     {
         var sceneDir = Path.Combine(metadata.Directory, "scenes");
@@ -162,7 +195,7 @@ public partial class ModLoader : Node
                 var scenePath = $"res://{Path.GetRelativePath(OS.GetUserDataDir(), sceneFile)}";
                 var scene = GD.Load<PackedScene>(scenePath);
                 var instance = scene.Instantiate();
-                
+
                 GetTree().Root.AddChild(instance);
                 Logger.LogInfo($"已加载场景: {Path.GetFileName(sceneFile)}");
             }
@@ -173,6 +206,11 @@ public partial class ModLoader : Node
         }
     }
 
+    /// <summary>
+    /// 处理程序集中的类型
+    /// </summary>
+    /// <param name="assembly">程序集</param>
+    /// <param name="metadata">模组元数据</param>
     private void ProcessAssemblyTypes(Assembly assembly, ModMetadata metadata)
     {
         foreach (var type in assembly.GetTypes())
@@ -193,7 +231,7 @@ public partial class ModLoader : Node
                 Logger.LogError($"实例化失败: {type.FullName}");
                 continue;
             }
-            
+
             SetModMetadata(modInstance, metadata);
 
             ModInstances.Add(modInstance);
@@ -202,21 +240,31 @@ public partial class ModLoader : Node
         }
     }
 
+    /// <summary>
+    /// 设置模组元数据
+    /// </summary>
+    /// <param name="modInstance">模组实例</param>
+    /// <param name="metadata">模组元数据</param>
     private static void SetModMetadata(IMod modInstance, ModMetadata metadata)
     {
         var modType = modInstance.GetType();
-        
+
         var modIdProp = modType.GetProperty("ModId");
         var versionProp = modType.GetProperty("Version");
         var authorProp = modType.GetProperty("Author");
         var descriptionProp = modType.GetProperty("Description");
-        
+
         modIdProp?.SetValue(modInstance, metadata.Id);
         versionProp?.SetValue(modInstance, metadata.Version);
         authorProp?.SetValue(modInstance, metadata.Author);
         descriptionProp?.SetValue(modInstance, metadata.Description);
     }
 
+    /// <summary>
+    /// 检查类型是否为模组类
+    /// </summary>
+    /// <param name="type">要检查的类型</param>
+    /// <returns>如果是模组类则返回true，否则返回false</returns>
     private static bool IsModClass(Type type)
     {
         if (type.IsAbstract || type.IsInterface) return false;
