@@ -111,12 +111,7 @@ namespace CommonSDK.Data
         /// <summary>
         /// 存档文件夹名称
         /// </summary>
-        private const string SaveFolder = "PlayerSaves";
-
-        /// <summary>
-        /// 加密密钥（应替换为实际密钥）
-        /// </summary>
-        private static readonly string[] CryptoKeys = { "AESKey1234567890", "AESIV0987654321" };
+        private const string SaveFolder = "Saves";
 
         #endregion
 
