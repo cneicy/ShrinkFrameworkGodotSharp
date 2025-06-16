@@ -74,8 +74,9 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
             LogHelper.LogError($"{typeof(T).Name}创建失败: 场景树不可用");
             return;
         }
-
-        var existingInstance = FindUtils.FindObjectOfType<T>();
+        
+        var root = sceneTree.Root;
+        var existingInstance = root.FindObjectOfType<T>();
         if (existingInstance != null)
         {
             _instance = existingInstance;
@@ -83,7 +84,8 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
             return;
         }
 
-        var groupInstance = FindUtils.FindWithGroup<T>($"singleton_{typeof(T).Name}");
+        // 使用扩展方法通过组查找实例
+        var groupInstance = root.FindWithGroup<T>($"singleton_{typeof(T).Name}");
         if (groupInstance != null)
         {
             _instance = groupInstance;
@@ -99,8 +101,8 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
             return;
         }
 
-        var root = sceneTree.Root.GetNode("/root");
-        root.CallDeferred(Node.MethodName.AddChild, _instance);
+        var rootNode = sceneTree.Root.GetNode("/root");
+        rootNode.CallDeferred(Node.MethodName.AddChild, _instance);
 
         _instance.AddToGroup($"singleton_{typeof(T).Name}");
         _instance.ProcessMode = ProcessModeEnum.Always;
@@ -209,7 +211,7 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
     /// </summary>
     public static void DestroySingleton()
     {
-        _instance.QueueFree();
+        _instance?.QueueFree();
     }
 
     /// <summary>

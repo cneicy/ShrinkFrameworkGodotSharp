@@ -7,45 +7,38 @@ using Godot;
 namespace CommonSDK.Utils;
 
 /// <summary>
-/// 查找工具类
-/// <para>提供在场景树中查找节点的各种方法</para>
+/// Node查找扩展方法
+/// <para>为Node类提供类似Unity的查找功能</para>
 /// </summary>
 public static class FindUtils
 {
     private static readonly LogHelper Logger = new("FindUtils");
-    private static SceneTree GetSceneTree()
-    {
-        return Engine.GetMainLoop() as SceneTree;
-    }
-
-    private static Node GetRoot()
-    {
-        return GetSceneTree()?.Root;
-    }
 
     #region FindObjectOfType 系列方法
-
+    
     /// <summary>
     /// 查找场景树中第一个指定类型的对象
     /// </summary>
     /// <typeparam name="T">要查找的对象类型</typeparam>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="includeInactive">是否包含未激活的节点</param>
     /// <returns>找到的对象，如果没有则返回null</returns>
-    public static T FindObjectOfType<T>(bool includeInactive = false) where T : Node
+    public static T FindObjectOfType<T>(this Node node, bool includeInactive = false) where T : Node
     {
-        var root = GetRoot();
+        var root = GetSceneRoot(node);
         return root == null ? null : FindObjectOfTypeRecursive<T>(root, includeInactive);
     }
 
     /// <summary>
     /// 查找场景树中第一个指定类型的对象
     /// </summary>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="type">要查找的对象类型</param>
     /// <param name="includeInactive">是否包含未激活的节点</param>
     /// <returns>找到的对象，如果没有则返回null</returns>
-    public static Node FindObjectOfType(Type type, bool includeInactive = false)
+    public static Node FindObjectOfType(this Node node, Type type, bool includeInactive = false)
     {
-        var root = GetRoot();
+        var root = GetSceneRoot(node);
         return root == null ? null : FindObjectOfTypeRecursive(root, type, includeInactive);
     }
 
@@ -53,11 +46,12 @@ public static class FindUtils
     /// 查找场景树中所有指定类型的对象
     /// </summary>
     /// <typeparam name="T">要查找的对象类型</typeparam>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="includeInactive">是否包含未激活的节点</param>
     /// <returns>找到的对象数组</returns>
-    public static T[] FindObjectsOfType<T>(bool includeInactive = false) where T : Node
+    public static T[] FindObjectsOfType<T>(this Node node, bool includeInactive = false) where T : Node
     {
-        var root = GetRoot();
+        var root = GetSceneRoot(node);
         if (root == null) return new T[0];
 
         var results = new List<T>();
@@ -68,12 +62,13 @@ public static class FindUtils
     /// <summary>
     /// 查找场景树中所有指定类型的对象
     /// </summary>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="type">要查找的对象类型</param>
     /// <param name="includeInactive">是否包含未激活的节点</param>
     /// <returns>找到的对象数组</returns>
-    public static Node[] FindObjectsOfType(Type type, bool includeInactive = false)
+    public static Node[] FindObjectsOfType(this Node node, Type type, bool includeInactive = false)
     {
-        var root = GetRoot();
+        var root = GetSceneRoot(node);
         if (root == null) return new Node[0];
 
         var results = new List<Node>();
@@ -83,94 +78,203 @@ public static class FindUtils
 
     #endregion
 
-    #region Find 系列方法
+    #region 查找子节点方法 (类似Unity的Transform.Find)
 
     /// <summary>
-    /// 根据名称查找第一个节点
+    /// 在当前节点及其子节点中查找第一个指定类型的组件
     /// </summary>
-    /// <param name="name">要查找的节点名称</param>
-    /// <param name="exactMatch">是否进行精确匹配</param>
+    /// <typeparam name="T">要查找的组件类型</typeparam>
+    /// <param name="node">起始查找节点</param>
     /// <param name="includeInactive">是否包含未激活的节点</param>
-    /// <returns>找到的节点，如果没有则返回null</returns>
-    public static Node Find(string name, bool exactMatch = true, bool includeInactive = false)
+    /// <returns>找到的组件，如果没有则返回null</returns>
+    public static T GetComponentInChildren<T>(this Node node, bool includeInactive = false) where T : Node
     {
-        var root = GetRoot();
-        return root == null ? null : FindByNameRecursive(root, name, exactMatch, includeInactive);
+        return node == null ? null : FindObjectOfTypeRecursive<T>(node, includeInactive);
     }
 
     /// <summary>
-    /// 根据名称查找所有节点
+    /// 在当前节点及其子节点中查找所有指定类型的组件
     /// </summary>
-    /// <param name="name">要查找的节点名称</param>
-    /// <param name="exactMatch">是否进行精确匹配</param>
+    /// <typeparam name="T">要查找的组件类型</typeparam>
+    /// <param name="node">起始查找节点</param>
     /// <param name="includeInactive">是否包含未激活的节点</param>
-    /// <returns>找到的节点数组</returns>
-    public static Node[] FindAll(string name, bool exactMatch = true, bool includeInactive = false)
+    /// <returns>找到的组件数组</returns>
+    public static T[] GetComponentsInChildren<T>(this Node node, bool includeInactive = false) where T : Node
     {
-        var root = GetRoot();
-        if (root == null) return new Node[0];
+        if (node == null) return new T[0];
 
-        var results = new List<Node>();
-        FindAllByNameRecursive(root, name, exactMatch, includeInactive, results);
+        var results = new List<T>();
+        FindObjectsOfTypeRecursive<T>(node, results, includeInactive);
         return results.ToArray();
     }
 
     /// <summary>
-    /// 根据路径查找节点
+    /// 在当前节点的父级及其祖先中查找第一个指定类型的组件
     /// </summary>
-    /// <param name="path">节点路径</param>
-    /// <returns>找到的节点，如果没有则返回null</returns>
-    public static Node FindByPath(string path)
+    /// <typeparam name="T">要查找的组件类型</typeparam>
+    /// <param name="node">起始查找节点</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的组件，如果没有则返回null</returns>
+    public static T GetComponentInParent<T>(this Node node, bool includeInactive = false) where T : Node
     {
-        var root = GetRoot();
-        return root?.GetNode(path);
+        var current = node;
+        while (current != null)
+        {
+            if ((!includeInactive && !IsNodeActive(current)) == false)
+            {
+                if (current is T result)
+                    return result;
+                
+                if (HasScriptOfType<T>(current))
+                    return current as T;
+            }
+            current = current.GetParent();
+        }
+        return null;
     }
 
     /// <summary>
-    /// 根据路径查找指定类型的节点
+    /// 在当前节点的父级及其祖先中查找所有指定类型的组件
     /// </summary>
-    /// <typeparam name="T">要查找的节点类型</typeparam>
-    /// <param name="path">节点路径</param>
-    /// <returns>找到的节点，如果没有则返回null</returns>
-    public static T FindByPath<T>(string path) where T : Node
+    /// <typeparam name="T">要查找的组件类型</typeparam>
+    /// <param name="node">起始查找节点</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的组件数组</returns>
+    public static T[] GetComponentsInParent<T>(this Node node, bool includeInactive = false) where T : Node
     {
-        return FindByPath(path) as T;
+        var results = new List<T>();
+        var current = node;
+        
+        while (current != null)
+        {
+            if (includeInactive || IsNodeActive(current))
+            {
+                if (current is T directResult)
+                {
+                    results.Add(directResult);
+                }
+                else if (HasScriptOfType<T>(current))
+                {
+                    if (current is T scriptResult)
+                    {
+                        results.Add(scriptResult);
+                    }
+                }
+            }
+            current = current.GetParent();
+        }
+        
+        return results.ToArray();
+    }
+
+    /// <summary>
+    /// 获取当前节点上的指定类型组件（不查找子节点）
+    /// </summary>
+    /// <typeparam name="T">要查找的组件类型</typeparam>
+    /// <param name="node">目标节点</param>
+    /// <returns>找到的组件，如果没有则返回null</returns>
+    public static T GetComponent<T>(this Node node) where T : Node
+    {
+        if (node == null) return null;
+        
+        if (node is T directResult)
+            return directResult;
+            
+        if (HasScriptOfType<T>(node))
+            return node as T;
+            
+        return null;
     }
 
     #endregion
 
-    #region FindWithGroup 系列方法
+    #region 按名称查找方法
+
+    /// <summary>
+    /// 在当前节点的直接子节点中按名称查找
+    /// </summary>
+    /// <param name="node">父节点</param>
+    /// <param name="name">子节点名称</param>
+    /// <returns>找到的子节点，如果没有则返回null</returns>
+    public static Node Find(this Node node, string name)
+    {
+        if (node == null || string.IsNullOrEmpty(name)) return null;
+
+        foreach (var child in node.GetChildren())
+        {
+            if (child.Name.ToString().Equals(name, StringComparison.OrdinalIgnoreCase))
+                return child;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 在当前节点及其所有子节点中递归查找指定名称的节点
+    /// </summary>
+    /// <param name="node">起始节点</param>
+    /// <param name="name">要查找的节点名称</param>
+    /// <param name="exactMatch">是否进行精确匹配</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的节点，如果没有则返回null</returns>
+    public static Node FindInChildren(this Node node, string name, bool exactMatch = true, bool includeInactive = false)
+    {
+        return node == null ? null : FindByNameRecursive(node, name, exactMatch, includeInactive);
+    }
+
+    /// <summary>
+    /// 在当前节点及其所有子节点中递归查找所有指定名称的节点
+    /// </summary>
+    /// <param name="node">起始节点</param>
+    /// <param name="name">要查找的节点名称</param>
+    /// <param name="exactMatch">是否进行精确匹配</param>
+    /// <param name="includeInactive">是否包含未激活的节点</param>
+    /// <returns>找到的节点数组</returns>
+    public static Node[] FindAllInChildren(this Node node, string name, bool exactMatch = true, bool includeInactive = false)
+    {
+        if (node == null) return new Node[0];
+
+        var results = new List<Node>();
+        FindAllByNameRecursive(node, name, exactMatch, includeInactive, results);
+        return results.ToArray();
+    }
+
+    #endregion
+
+    #region 组查找方法
 
     /// <summary>
     /// 根据组名查找第一个节点
     /// </summary>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="group">组名</param>
     /// <returns>找到的节点，如果没有则返回null</returns>
-    public static Node FindWithGroup(string group)
+    public static Node FindWithGroup(this Node node, string group)
     {
-        var sceneTree = GetSceneTree();
-        return sceneTree.GetFirstNodeInGroup(group);
+        var sceneTree = node.GetTree();
+        return sceneTree?.GetFirstNodeInGroup(group);
     }
 
     /// <summary>
     /// 根据组名查找第一个指定类型的节点
     /// </summary>
     /// <typeparam name="T">要查找的节点类型</typeparam>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="group">组名</param>
     /// <returns>找到的节点，如果没有则返回null</returns>
-    public static T FindWithGroup<T>(string group) where T : Node
+    public static T FindWithGroup<T>(this Node node, string group) where T : Node
     {
-        return FindWithGroup(group) as T;
+        return node.FindWithGroup(group) as T;
     }
 
     /// <summary>
     /// 根据组名查找所有节点
     /// </summary>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="group">组名</param>
     /// <returns>找到的节点数组</returns>
-    public static Node[] FindObjectsWithGroup(string group)
+    public static Node[] FindObjectsWithGroup(this Node node, string group)
     {
-        var sceneTree = GetSceneTree();
+        var sceneTree = node.GetTree();
         var nodes = sceneTree?.GetNodesInGroup(group);
         return nodes?.Cast<Node>().ToArray() ?? new Node[0];
     }
@@ -179,64 +283,71 @@ public static class FindUtils
     /// 根据组名查找所有指定类型的节点
     /// </summary>
     /// <typeparam name="T">要查找的节点类型</typeparam>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="group">组名</param>
     /// <returns>找到的节点数组</returns>
-    public static T[] FindObjectsWithGroup<T>(string group) where T : Node
+    public static T[] FindObjectsWithGroup<T>(this Node node, string group) where T : Node
     {
-        var nodes = FindObjectsWithGroup(group);
+        var nodes = node.FindObjectsWithGroup(group);
         return nodes.OfType<T>().ToArray();
     }
 
     #endregion
 
-    #region FindInChildren 系列方法
-
-    // 此系列方法会先从传入的父节点找起
+    #region 便捷查询方法
 
     /// <summary>
-    /// 在父节点的子节点中查找第一个指定类型的节点
+    /// 检查是否存在指定类型的对象
     /// </summary>
-    /// <typeparam name="T">要查找的节点类型</typeparam>
-    /// <param name="parent">父节点</param>
+    /// <typeparam name="T">要检查的对象类型</typeparam>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="includeInactive">是否包含未激活的节点</param>
-    /// <returns>找到的节点，如果没有则返回null</returns>
-    public static T FindInChildren<T>(Node parent, bool includeInactive = false) where T : Node
+    /// <returns>如果存在则返回true，否则返回false</returns>
+    public static bool HasObjectOfType<T>(this Node node, bool includeInactive = false) where T : Node
     {
-        return parent == null ? null : FindObjectOfTypeRecursive<T>(parent, includeInactive);
+        return node.FindObjectOfType<T>(includeInactive) != null;
     }
 
     /// <summary>
-    /// 在父节点的子节点中查找所有指定类型的节点
+    /// 计算指定类型的对象数量
     /// </summary>
-    /// <typeparam name="T">要查找的节点类型</typeparam>
-    /// <param name="parent">父节点</param>
+    /// <typeparam name="T">要计算的对象类型</typeparam>
+    /// <param name="node">任意节点（用于获取场景树）</param>
     /// <param name="includeInactive">是否包含未激活的节点</param>
-    /// <returns>找到的节点数组</returns>
-    public static T[] FindAllInChildren<T>(Node parent, bool includeInactive = false) where T : Node
+    /// <returns>对象数量</returns>
+    public static int CountObjectsOfType<T>(this Node node, bool includeInactive = false) where T : Node
     {
-        if (parent == null) return new T[0];
-
-        var results = new List<T>();
-        FindObjectsOfTypeRecursive(parent, results, includeInactive);
-        return results.ToArray();
+        return node.FindObjectsOfType<T>(includeInactive).Length;
     }
 
     /// <summary>
-    /// 在父节点的子节点中查找第一个指定名称的节点
+    /// 获取场景树中所有激活的节点
     /// </summary>
-    /// <param name="parent">父节点</param>
-    /// <param name="name">要查找的节点名称</param>
-    /// <param name="exactMatch">是否进行精确匹配</param>
-    /// <param name="includeInactive">是否包含未激活的节点</param>
-    /// <returns>找到的节点，如果没有则返回null</returns>
-    public static Node FindInChildren(Node parent, string name, bool exactMatch = true, bool includeInactive = false)
+    /// <param name="node">任意节点（用于获取场景树）</param>
+    /// <returns>激活的节点数组</returns>
+    public static Node[] GetAllActiveNodes(this Node node)
     {
-        return parent == null ? null : FindByNameRecursive(parent, name, exactMatch, includeInactive);
+        return node.FindObjectsOfType<Node>(includeInactive: false);
+    }
+
+    /// <summary>
+    /// 获取场景树中所有节点
+    /// </summary>
+    /// <param name="node">任意节点（用于获取场景树）</param>
+    /// <returns>节点数组</returns>
+    public static Node[] GetAllNodes(this Node node)
+    {
+        return node.FindObjectsOfType<Node>(includeInactive: true);
     }
 
     #endregion
 
-    #region 递归查找辅助方法
+    #region 辅助方法
+
+    private static Node GetSceneRoot(Node node)
+    {
+        return node?.GetTree()?.Root;
+    }
 
     private static T FindObjectOfTypeRecursive<T>(Node node, bool includeInactive) where T : Node
     {
@@ -416,40 +527,6 @@ public static class FindUtils
         return false;
     }
 
-    private static string GetScriptTypeName(CSharpScript script)
-    {
-        try
-        {
-            var path = script.ResourcePath;
-            if (!string.IsNullOrEmpty(path))
-            {
-                var fileName = Path.GetFileNameWithoutExtension(path);
-                return fileName;
-            }
-        }
-        catch
-        {
-            // ignored
-        }
-
-        return string.Empty;
-    }
-
-    private static bool IsScriptDerivedFrom<T>(Node node, CSharpScript script) where T : Node
-    {
-        try
-        {
-            var targetType = typeof(T);
-            var nodeType = node.GetType();
-
-            return targetType.IsAssignableFrom(nodeType);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     private static bool HasScriptOfType(Node node, Type targetType)
     {
         try
@@ -469,7 +546,7 @@ public static class FindUtils
                     var scriptPath = scriptResource.ResourcePath;
                     if (!string.IsNullOrEmpty(scriptPath))
                     {
-                        var fileName = System.IO.Path.GetFileNameWithoutExtension(scriptPath);
+                        var fileName = Path.GetFileNameWithoutExtension(scriptPath);
                         if (fileName == targetType.Name)
                         {
                             return true;
@@ -484,50 +561,6 @@ public static class FindUtils
         }
 
         return false;
-    }
-
-    #endregion
-
-    #region 便捷方法
-
-    /// <summary>
-    /// 获取所有激活的节点
-    /// </summary>
-    /// <returns>激活的节点数组</returns>
-    public static Node[] GetAllActiveNodes()
-    {
-        return FindObjectsOfType<Node>(includeInactive: false);
-    }
-
-    /// <summary>
-    /// 获取所有节点
-    /// </summary>
-    /// <returns>节点数组</returns>
-    public static Node[] GetAllNodes()
-    {
-        return FindObjectsOfType<Node>(includeInactive: true);
-    }
-
-    /// <summary>
-    /// 计算指定类型的对象数量
-    /// </summary>
-    /// <typeparam name="T">要计算的对象类型</typeparam>
-    /// <param name="includeInactive">是否包含未激活的节点</param>
-    /// <returns>对象数量</returns>
-    public static int CountObjectsOfType<T>(bool includeInactive = false) where T : Node
-    {
-        return FindObjectsOfType<T>(includeInactive).Length;
-    }
-
-    /// <summary>
-    /// 检查场景树中是否存在指定类型的对象
-    /// </summary>
-    /// <typeparam name="T">要检查的对象类型</typeparam>
-    /// <param name="includeInactive">是否包含未激活的节点</param>
-    /// <returns>如果存在则返回true，否则返回false</returns>
-    public static bool HasObjectOfType<T>(bool includeInactive = false) where T : Node
-    {
-        return FindObjectOfType<T>(includeInactive) != null;
     }
 
     #endregion
