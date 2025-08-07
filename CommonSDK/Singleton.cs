@@ -1,4 +1,5 @@
-﻿using CommonSDK.Logger;
+﻿using System.Reflection;
+using CommonSDK.Logger;
 using CommonSDK.Utils;
 using Godot;
 
@@ -35,7 +36,27 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
     /// 日志帮助类实例
     /// </summary>
     private static readonly LogHelper LogHelper = new($"Singleton Of {typeof(T).Name}");
+    
+    private static readonly bool IsEagerLoad;
 
+    static Singleton()
+    {
+        var attr = typeof(T).GetCustomAttribute<SingletonAttribute>();
+        IsEagerLoad = attr?.LoadMode == LoadMode.Eager;
+
+        if (IsEagerLoad)
+        {
+            // 强加载：立即创建实例
+            lock (Lock)
+            {
+                if (_instance == null && !_isQuitting)
+                {
+                    CreateInstance();
+                }
+            }
+        }
+    }
+    
     /// <summary>
     /// 获取单例实例
     /// <para>如果实例不存在且应用未退出，则自动创建实例</para>
@@ -52,7 +73,6 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
                     CreateInstance();
                 }
             }
-
             return _instance;
         }
     }
@@ -225,5 +245,35 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
         {
             _isQuitting = true;
         }
+    }
+    
+    /// <summary>
+    /// 单例加载模式特性
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class)]
+    public class SingletonAttribute : Attribute
+    {
+        public LoadMode LoadMode { get; }
+
+        public SingletonAttribute(LoadMode loadMode)
+        {
+            LoadMode = loadMode;
+        }
+    }
+
+    /// <summary>
+    /// 加载模式枚举
+    /// </summary>
+    public enum LoadMode
+    {
+        /// <summary>
+        /// 懒加载：第一次访问 Instance 时创建
+        /// </summary>
+        Lazy,
+
+        /// <summary>
+        /// 强加载：在程序启动时就创建实例
+        /// </summary>
+        Eager
     }
 }

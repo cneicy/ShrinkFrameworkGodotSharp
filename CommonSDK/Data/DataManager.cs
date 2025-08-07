@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+﻿/*using System.Security.Cryptography;
 using System.Text;
 using CommonSDK.Event;
 using CommonSDK.Logger;
@@ -659,4 +659,4 @@ namespace CommonSDK.Data
 
         #endregion
     }
-}
+}*/
