@@ -4,20 +4,66 @@ using Godot;
 
 namespace CommonSDK.Event;
 
-public static class EventBusGeneratedRegistration
+/// <summary>
+/// EventBus注册助手类
+/// </summary>
+/// <remarks>
+/// <para>负责使用反射扫描和注册事件处理程序的核心工具类</para>
+/// <para>主要功能包括:</para>
+/// <list type="bullet">
+/// <item><description>扫描程序集中的静态事件处理程序</description></item>
+/// <item><description>注册对象实例的事件处理程序</description></item>
+/// <item><description>处理同步和异步方法的包装</description></item>
+/// <item><description>支持优先级解析和设置</description></item>
+/// </list>
+/// <para>这个类被EventBus系统内部使用，通常不需要直接调用</para>
+/// </remarks>
+public static class EventBusRegHelper
 {
+    /// <summary>
+    /// 注册静态事件处理程序的入口方法
+    /// </summary>
+    /// <remarks>
+    /// 委托给RegisterStaticEventHandlersWithReflection方法执行实际工作。
+    /// 使用AggressiveInlining优化性能。
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void RegisterStaticEventHandlers()
+    public static void RegStaticEventHandler()
     {
         RegisterStaticEventHandlersWithReflection();
     }
 
+    /// <summary>
+    /// 注册对象实例事件处理程序的入口方法
+    /// </summary>
+    /// <param name="target">要注册的目标对象</param>
+    /// <remarks>
+    /// 委托给RegisterEventHandlersWithReflection方法执行实际工作。
+    /// 使用AggressiveInlining优化性能。
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void RegisterEventHandlers(object target)
     {
         RegisterEventHandlersWithReflection(target);
     }
 
+    /// <summary>
+    /// 使用反射注册静态事件处理程序
+    /// </summary>
+    /// <remarks>
+    /// <para>扫描所有程序集，查找符合条件的静态方法并注册为事件处理程序</para>
+    /// <para>处理步骤:</para>
+    /// <list type="number">
+    /// <item><description>遍历当前应用程序域的所有程序集</description></item>
+    /// <item><description>查找标记了EventBusSubscriberAttribute的类型</description></item>
+    /// <item><description>扫描类型中标记了EventSubscribeAttribute的静态方法</description></item>
+    /// <item><description>验证方法签名（参数和返回类型）</description></item>
+    /// <item><description>解析优先级设置</description></item>
+    /// <item><description>创建委托并注册到EventBus</description></item>
+    /// </list>
+    /// <para>支持同步（void返回）和异步（Task返回）两种方法类型</para>
+    /// <para>包含完整的错误处理和调试日志</para>
+    /// </remarks>
     private static void RegisterStaticEventHandlersWithReflection()
     {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
@@ -30,7 +76,6 @@ public static class EventBusGeneratedRegistration
 
                 foreach (var type in types)
                 {
-                    // 检查类是否有 AutoRegisterEvents 特性
                     var classAttributes = type.GetCustomAttributes(typeof(EventBusSubscriberAttribute), false);
                     if (classAttributes.Length == 0) continue;
 
@@ -40,6 +85,10 @@ public static class EventBusGeneratedRegistration
                     {
                         var attributes = method.GetCustomAttributes(typeof(EventSubscribeAttribute), false);
                         if (attributes.Length == 0) continue;
+
+                        // 获取优先级
+                        var subscribeAttr = (EventSubscribeAttribute)attributes[0];
+                        var priority = subscribeAttr.Priority;
 
                         var parameters = method.GetParameters();
 
@@ -56,7 +105,7 @@ public static class EventBusGeneratedRegistration
                         {
                             if (OS.IsDebugBuild())
                                 EventBus.Logger.LogError(
-                                    $"静态方法 {method.Name} 在类 {type.Name} 中带有 EventSubscribeAttribute，但参数类型 {parameterType.Name} 不继承自 EventBusEvent。");
+                                    $"静态方法 {method.Name} 在类 {type.Name} 中带有 EventSubscribeAttribute，但参数类型 {parameterType.Name} 不继承自 EventBase。");
                             continue;
                         }
 
@@ -68,28 +117,31 @@ public static class EventBusGeneratedRegistration
                             {
                                 var funcType = typeof(Func<,>).MakeGenericType(parameterType, typeof(Task));
                                 var handlerDelegate = Delegate.CreateDelegate(funcType, method);
+
+                                EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority, 
+                                    $"Static {type.Name}.{method.Name} (Async, Priority: {priority})");
                                 
-                                // 直接调用泛型方法
-                                RegisterEventGeneric(parameterType, handlerDelegate, true);
+                                if (OS.IsDebugBuild())
+                                    EventBus.Logger.LogInfo($"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority})");
                             }
                             else if (method.ReturnType == typeof(void))
                             {
                                 var actionType = typeof(Action<>).MakeGenericType(parameterType);
                                 var actionDelegate = Delegate.CreateDelegate(actionType, method);
 
-                                // 直接调用泛型方法
-                                RegisterEventGeneric(parameterType, actionDelegate, false);
+                                var wrappedHandler = WrapSyncHandler(parameterType, actionDelegate);
+                                EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, 
+                                    $"Static {type.Name}.{method.Name} (Sync, Priority: {priority})");
+                                
+                                if (OS.IsDebugBuild())
+                                    EventBus.Logger.LogInfo($"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority})");
                             }
                             else
                             {
                                 if (OS.IsDebugBuild())
                                     EventBus.Logger.LogError(
                                         $"静态方法 {method.Name} 在类 {type.Name} 中带有 EventSubscribeAttribute，但返回类型不是 void 或 Task。");
-                                continue;
                             }
-
-                            if (OS.IsDebugBuild())
-                                EventBus.Logger.LogInfo($"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name}");
                         }
                         catch (Exception ex)
                         {
@@ -107,11 +159,28 @@ public static class EventBusGeneratedRegistration
         }
     }
 
+    /// <summary>
+    /// 使用反射注册对象实例的事件处理程序
+    /// </summary>
+    /// <param name="target">要注册的目标对象</param>
+    /// <remarks>
+    /// <para>扫描目标对象的类型，注册其实例方法为事件处理程序</para>
+    /// <para>处理步骤:</para>
+    /// <list type="number">
+    /// <item><description>验证目标对象的类型是否标记了EventBusSubscriberAttribute</description></item>
+    /// <item><description>获取类型中的所有实例方法</description></item>
+    /// <item><description>查找标记了EventSubscribeAttribute的方法</description></item>
+    /// <item><description>跳过静态方法（已在静态注册阶段处理）</description></item>
+    /// <item><description>验证方法签名和解析优先级</description></item>
+    /// <item><description>创建实例委托并注册到EventBus</description></item>
+    /// </list>
+    /// <para>支持public、private和protected的实例方法</para>
+    /// <para>包含完整的错误处理和调试支持</para>
+    /// </remarks>
     private static void RegisterEventHandlersWithReflection(object target)
     {
         var type = target.GetType();
         
-        // 检查类是否有 AutoRegisterEvents 特性
         var classAttributes = type.GetCustomAttributes(typeof(EventBusSubscriberAttribute), false);
         if (classAttributes.Length == 0) return;
 
@@ -124,6 +193,10 @@ public static class EventBusGeneratedRegistration
 
             // 跳过静态方法，因为它们已经在静态注册阶段处理过了
             if (method.IsStatic) continue;
+
+            // 获取优先级
+            var subscribeAttr = (EventSubscribeAttribute)attributes[0];
+            var priority = subscribeAttr.Priority;
 
             var parameters = method.GetParameters();
 
@@ -140,7 +213,7 @@ public static class EventBusGeneratedRegistration
             {
                 if (OS.IsDebugBuild())
                     EventBus.Logger.LogError(
-                        $"方法 {method.Name} 在类 {type.Name} 中带有 EventSubscribeAttribute，但参数类型 {parameterType.Name} 不继承自 EventBusEvent。");
+                        $"方法 {method.Name} 在类 {type.Name} 中带有 EventSubscribeAttribute，但参数类型 {parameterType.Name} 不继承自 EventBase。");
                 continue;
             }
 
@@ -153,27 +226,18 @@ public static class EventBusGeneratedRegistration
                     var funcType = typeof(Func<,>).MakeGenericType(parameterType, typeof(Task));
                     var handlerDelegate = Delegate.CreateDelegate(funcType, target, method);
                     
-                    // 直接调用泛型方法
-                    RegisterEventGeneric(parameterType, handlerDelegate, true);
+                    EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority, 
+                        $"Instance {type.Name}.{method.Name} (Async, Priority: {priority})");
                 }
                 else if (method.ReturnType == typeof(void))
                 {
                     var actionType = typeof(Action<>).MakeGenericType(parameterType);
                     var actionDelegate = Delegate.CreateDelegate(actionType, target, method);
 
-                    // 直接调用泛型方法
-                    RegisterEventGeneric(parameterType, actionDelegate, false);
+                    var wrappedHandler = WrapSyncHandler(parameterType, actionDelegate);
+                    EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, 
+                        $"Instance {type.Name}.{method.Name} (Sync, Priority: {priority})");
                 }
-                else
-                {
-                    if (OS.IsDebugBuild())
-                        EventBus.Logger.LogError(
-                            $"方法 {method.Name} 在类 {type.Name} 中带有 EventSubscribeAttribute，但返回类型不是 void 或 Task。");
-                    continue;
-                }
-
-                if (OS.IsDebugBuild())
-                    EventBus.Logger.LogInfo($"自动注册事件: {parameterType.FullName} -> {type.Name}.{method.Name}");
             }
             catch (Exception ex)
             {
@@ -184,84 +248,21 @@ public static class EventBusGeneratedRegistration
     }
 
     /// <summary>
-    /// 注册事件的通用方法
+    /// 将同步处理程序包装为异步版本
     /// </summary>
     /// <param name="eventType">事件类型</param>
-    /// <param name="handlerDelegate">处理程序委托</param>
-    /// <param name="isAsync">是否为异步处理程序</param>
-    private static void RegisterEventGeneric(Type eventType, Delegate handlerDelegate, bool isAsync)
-    {
-        try
-        {
-            if (isAsync)
-            {
-                // 对于异步处理程序，直接调用内部注册方法
-                var funcType = typeof(Func<,>).MakeGenericType(eventType, typeof(Task));
-                var typedHandler = Convert.ChangeType(handlerDelegate, funcType);
-                
-                // 调用内部的字典注册方法
-                RegisterEventInternal(eventType, (Delegate)typedHandler);
-            }
-            else
-            {
-                // 对于同步处理程序，包装成异步
-                var wrappedHandler = WrapSyncHandler(eventType, handlerDelegate);
-                RegisterEventInternal(eventType, wrappedHandler);
-            }
-
-            if (OS.IsDebugBuild())
-                EventBus.Logger.LogInfo($"成功注册事件: {eventType.FullName}, 异步: {isAsync}");
-        }
-        catch (Exception ex)
-        {
-            if (OS.IsDebugBuild())
-                EventBus.Logger.LogError($"注册事件失败: {eventType.FullName}, 异常: {ex}");
-        }
-    }
-
-    /// <summary>
-    /// 内部注册方法，直接操作EventBus的字典
-    /// </summary>
-    private static void RegisterEventInternal(Type eventType, Delegate handler)
-    {
-        // 获取EventBus的私有字段_eventHandlers
-        var eventHandlersField = typeof(EventBus).GetField("_eventHandlers", BindingFlags.NonPublic | BindingFlags.Static);
-        if (eventHandlersField == null)
-        {
-            throw new InvalidOperationException("无法访问EventBus._eventHandlers字段");
-        }
-
-        var eventHandlers = (Dictionary<Type, Delegate>)eventHandlersField.GetValue(null)!;
-        
-        if (!eventHandlers.TryGetValue(eventType, out var existingHandler))
-        {
-            eventHandlers[eventType] = handler;
-            if (OS.IsDebugBuild())
-            {
-                EventBus.Logger.LogInfo($"创建新的事件处理程序: {eventType.FullName}");
-            }
-        }
-        else
-        {
-            eventHandlers[eventType] = Delegate.Combine(existingHandler, handler);
-            if (OS.IsDebugBuild())
-            {
-                EventBus.Logger.LogInfo($"合并事件处理程序: {eventType.FullName}");
-            }
-        }
-
-        if (OS.IsDebugBuild())
-        {
-            EventBus.Logger.LogInfo($"当前事件处理程序字典大小: {eventHandlers.Count}");
-        }
-    }
-
-    /// <summary>
-    /// 包装同步处理程序为异步
-    /// </summary>
+    /// <param name="syncHandler">同步处理程序委托</param>
+    /// <returns>包装后的异步处理程序委托</returns>
+    /// <remarks>
+    /// <para>使用泛型方法动态包装同步处理程序</para>
+    /// <para>确保EventBus内部统一使用异步委托，简化处理逻辑</para>
+    /// <para>包装过程中保留原始的异常处理行为</para>
+    /// <para>使用反射调用泛型方法以支持任意事件类型</para>
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">当无法找到WrapAction方法时抛出</exception>
     private static Delegate WrapSyncHandler(Type eventType, Delegate syncHandler)
     {
-        var method = typeof(EventBusGeneratedRegistration)
+        var method = typeof(EventBusRegHelper)
             .GetMethod(nameof(WrapAction), BindingFlags.NonPublic | BindingFlags.Static)
             ?.MakeGenericMethod(eventType);
         
@@ -273,6 +274,18 @@ public static class EventBusGeneratedRegistration
         return (Delegate)method.Invoke(null, [syncHandler])!;
     }
 
+    /// <summary>
+    /// 将强类型的同步Action包装为异步Func
+    /// </summary>
+    /// <typeparam name="T">事件类型参数</typeparam>
+    /// <param name="actionDelegate">要包装的Action委托</param>
+    /// <returns>包装后的Func&lt;T, Task&gt;委托</returns>
+    /// <remarks>
+    /// <para>泛型包装方法，将Action&lt;T&gt;转换为Func&lt;T, Task&gt;</para>
+    /// <para>保证同步方法的异常被正确传播到异步上下文</para>
+    /// <para>对于成功执行的情况，返回已完成的Task</para>
+    /// <para>对于异常情况，创建包含异常信息的Task</para>
+    /// </remarks>
     private static Func<T, Task> WrapAction<T>(Delegate actionDelegate)
     {
         var typedAction = (Action<T>)actionDelegate;
