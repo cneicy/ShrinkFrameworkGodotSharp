@@ -1,5 +1,10 @@
 ﻿using Godot;
 using Godot.Collections;
+#pragma warning disable CS8603 // 可能返回 null 引用。
+#pragma warning disable CS8600 // 将 null 字面量或可能为 null 的值转换为非 null 类型。
+#pragma warning disable CS8605 // 取消装箱可能为 null 的值。
+#pragma warning disable CS8602 // 解引用可能出现空引用。
+#pragma warning disable CS8604 // 引用类型参数可能为 null。
 
 namespace CommonSDK.Utils;
 
@@ -54,6 +59,7 @@ public static class VariantUtils
     /// </summary>
     public static Variant CSharpToVariant(object value)
     {
+        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
         if (value == null) return default;
         
         var type = value.GetType();
@@ -134,6 +140,7 @@ public static class VariantUtils
     
     private static Variant ConvertListToVariant(object list, Type listType)
     {
+        // ReSharper disable once UnusedVariable
         var elementType = listType.GetGenericArguments()[0];
         var getCount = listType.GetProperty("Count");
         var getItem = listType.GetMethod("get_Item");

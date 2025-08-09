@@ -4,7 +4,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShrinkFrameworkGodotSharp",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommonSDK", "CommonSDK\CommonSDK.csproj", "{FE4F7D67-69D8-4D31-AE02-3587CF06AFF1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyMod", "MyMod\MyMod.csproj", "{05546559-160A-49CE-87E4-7CD0D9C68153}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheModBeMixined", "TheModBeMixined\TheModBeMixined.csproj", "{05546559-160A-49CE-87E4-7CD0D9C68153}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheMixinMod", "TheMixinMod\TheMixinMod.csproj", "{34A1B494-A560-4F48-B78A-D203E83BD2F4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,5 +33,11 @@ Global
 		{05546559-160A-49CE-87E4-7CD0D9C68153}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
 		{05546559-160A-49CE-87E4-7CD0D9C68153}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
 		{05546559-160A-49CE-87E4-7CD0D9C68153}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+		{34A1B494-A560-4F48-B78A-D203E83BD2F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34A1B494-A560-4F48-B78A-D203E83BD2F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34A1B494-A560-4F48-B78A-D203E83BD2F4}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{34A1B494-A560-4F48-B78A-D203E83BD2F4}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{34A1B494-A560-4F48-B78A-D203E83BD2F4}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{34A1B494-A560-4F48-B78A-D203E83BD2F4}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
 	EndGlobalSection
 EndGlobal

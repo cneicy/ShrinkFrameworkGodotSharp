@@ -1,5 +1,7 @@
 ﻿using CommonSDK.Logger;
 using Godot;
+// ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 'required' 修饰符或声明为可以为 null。
 
 namespace CommonSDK.BehaviorTree;
 
@@ -16,10 +18,10 @@ namespace CommonSDK.BehaviorTree;
         [Export] public BehaviorNode RootNode;
         [Export] public bool AutoRun = true;
         [Export] public float TickRate = 0.1f; // 执行频率（秒）
-        [Export] public bool DebugMode = false;
+        [Export] public bool DebugMode;
         
-        private float tickTimer = 0f;
-        private Blackboard _blackboard = new Blackboard();
+        private float _tickTimer;
+        private Blackboard _blackboard = new();
         private NodeStatus _lastStatus = NodeStatus.Running;
         
         /// <summary>
@@ -53,11 +55,11 @@ namespace CommonSDK.BehaviorTree;
         {
             if (!AutoRun || RootNode == null) return;
             
-            tickTimer += (float)delta;
+            _tickTimer += (float)delta;
             
-            if (tickTimer >= TickRate)
+            if (_tickTimer >= TickRate)
             {
-                tickTimer = 0f;
+                _tickTimer = 0f;
                 var status = Tick(delta);
                 
                 if (status != NodeStatus.Running && status != _lastStatus)

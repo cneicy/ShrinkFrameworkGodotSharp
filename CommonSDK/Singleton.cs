@@ -2,6 +2,9 @@
 using CommonSDK.Logger;
 using CommonSDK.Utils;
 using Godot;
+// ReSharper disable InconsistentlySynchronizedField
+#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 'required' 修饰符或声明为可以为 null。
+#pragma warning disable CS8625 // 无法将 null 字面量转换为非 null 的引用类型。
 
 // ReSharper disable StaticMemberInGenericType
 // ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
@@ -36,15 +39,13 @@ public abstract partial class Singleton<T> : Node where T : Singleton<T>, new()
     /// 日志帮助类实例
     /// </summary>
     private static readonly LogHelper LogHelper = new($"Singleton Of {typeof(T).Name}");
-    
-    private static readonly bool IsEagerLoad;
 
     static Singleton()
     {
         var attr = typeof(T).GetCustomAttribute<SingletonAttribute>();
-        IsEagerLoad = attr?.LoadMode == LoadMode.Eager;
+        var isEagerLoad = attr?.LoadMode == LoadMode.Eager;
 
-        if (IsEagerLoad)
+        if (isEagerLoad)
         {
             // 强加载：立即创建实例
             lock (Lock)

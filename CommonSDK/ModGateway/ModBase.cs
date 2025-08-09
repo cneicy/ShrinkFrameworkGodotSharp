@@ -1,55 +1,144 @@
 using CommonSDK.Logger;
 using Godot;
-// ReSharper disable StaticMemberInGenericType
-// ReSharper disable MemberCanBeProtected.Global
-#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 'required' 修饰符或声明为可以为 null。
-#pragma warning disable CA2211
 
 namespace CommonSDK.ModGateway;
 
 /// <summary>
 /// 模组基类
-/// <para>为所有模组提供基础功能和属性</para>
-/// <para>使用单例模式确保每个模组类型只有一个实例</para>
+/// <para>提供模组的基础实现和单例模式</para>
+/// <para>所有模组都应继承此类</para>
 /// </summary>
-/// <typeparam name="T">模组类型，必须继承自Node并实现IMod接口</typeparam>
-public abstract partial class ModBase<T> : Node where T : Node, IMod, new()
+/// <typeparam name="T">具体的模组类型</typeparam>
+public partial class ModBase<T> : Node, IMod where T : ModBase<T>, new()
 {
+    private static readonly Lazy<T> _instance = new(() => new T());
+    public static readonly LogHelper Logger = new(typeof(T).Name);
+
     /// <summary>
-    /// 模组唯一标识符
-    /// <para>用于在系统中唯一标识此模组</para>
+    /// 获取模组单例实例
     /// </summary>
-    public string ModId { get; set; }
-    
+    public static T Instance => _instance.Value;
+
     /// <summary>
-    /// 模组描述
-    /// <para>简要说明模组的功能和用途</para>
+    /// 模组ID
     /// </summary>
-    public string Description { get; set; }
-    
+    public string ModId { get; set; } = string.Empty;
+
     /// <summary>
-    /// 模组版本号
-    /// <para>遵循语义化版本规范</para>
+    /// 模组版本
     /// </summary>
-    public string Version { get; set; }
+    public string Version { get; set; } = "1.0.0";
+
+    /// <summary>
+    /// 模组作者
+    /// </summary>
+    public string[] Authors { get; set; } = [];
     
     /// <summary>
     /// 模组作者
-    /// <para>可以包含多个作者</para>
     /// </summary>
-    public string[] Author { get; set; }
-    
+    public string Author 
+    { 
+        get => Authors.Length > 0 ? string.Join(", ", Authors) : string.Empty;
+        set => Authors = string.IsNullOrEmpty(value) ? [] : [value];
+    }
+
     /// <summary>
-    /// 模组实例
-    /// <para>使用静态属性实现单例模式</para>
-    /// <para>确保每个模组类型在整个应用程序中只有一个实例</para>
+    /// 模组描述
     /// </summary>
-    public static T Instance { get; } = new();
-    
+    public string Description { get; set; } = string.Empty;
+
     /// <summary>
-    /// 模组日志记录器
-    /// <para>提供带有模组ID前缀的日志功能</para>
-    /// <para>用于记录模组特定的日志信息</para>
+    /// 🎯 异步初始化模组
     /// </summary>
-    public LogHelper Logger => new(ModId);
+    public virtual Task InitAsync()
+    {
+        Logger.LogInfo($"模组 {ModId} 初始化中...");
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// 🎯 异步启动模组
+    /// </summary>
+    public virtual Task StartAsync()
+    {
+        Logger.LogInfo($"模组 {ModId} 启动中...");
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// 模组循环更新
+    /// </summary>
+    public virtual void Loop(double delta)
+    {
+        // 子类实现
+    }
+
+    /// <summary>
+    /// 模组物理循环更新
+    /// </summary>
+    public virtual void PhysicsLoop(double delta)
+    {
+        // 子类实现
+    }
+
+    /// <summary>
+    /// 🎯 线程安全的添加子节点方法
+    /// </summary>
+    protected async Task CallDeferredAddChildAsync(Node child)
+    {
+        var taskManager = ModGateway.GetTaskManager();
+        if (taskManager == null)
+        {
+            Logger.LogError("TaskManager 未初始化，无法执行线程安全操作");
+            return;
+        }
+
+        await taskManager.CallDeferredAsync(() => AddChild(child));
+    }
+
+    /// <summary>
+    /// 🎯 线程安全的移除子节点方法
+    /// </summary>
+    protected async Task CallDeferredRemoveChildAsync(Node child)
+    {
+        var taskManager = ModGateway.GetTaskManager();
+        if (taskManager == null)
+        {
+            Logger.LogError("TaskManager 未初始化，无法执行线程安全操作");
+            return;
+        }
+
+        await taskManager.CallDeferredAsync(() => RemoveChild(child));
+    }
+
+    /// <summary>
+    /// 🎯 线程安全的执行任意主线程操作
+    /// </summary>
+    protected async Task CallDeferredAsync(Action action)
+    {
+        var taskManager = ModGateway.GetTaskManager();
+        if (taskManager == null)
+        {
+            Logger.LogError("TaskManager 未初始化，无法执行线程安全操作");
+            return;
+        }
+
+        await taskManager.CallDeferredAsync(action);
+    }
+
+    /// <summary>
+    /// 🎯 线程安全的执行任意主线程操作（带返回值）
+    /// </summary>
+    protected async Task<TResult> CallDeferredAsync<TResult>(Func<TResult> func)
+    {
+        var taskManager = ModGateway.GetTaskManager();
+        if (taskManager == null)
+        {
+            Logger.LogError("TaskManager 未初始化，无法执行线程安全操作");
+            return default(TResult);
+        }
+
+        return await taskManager.CallDeferredAsync(func);
+    }
 }

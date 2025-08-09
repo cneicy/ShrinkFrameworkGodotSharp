@@ -1,5 +1,10 @@
 ﻿using CommonSDK.Logger;
 using Godot;
+// ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+#pragma warning disable CS8603 // 可能返回 null 引用。
+#pragma warning disable CS8600 // 将 null 字面量或可能为 null 的值转换为非 null 类型。
+#pragma warning disable CS8601 // 引用类型赋值可能为 null。
+#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 'required' 修饰符或声明为可以为 null。
 
 namespace CommonSDK.StateMachine;
 
@@ -17,16 +22,16 @@ public partial class StateMachine : Node
     public State InitialState;
         
     [Export] 
-    public bool DebugMode = false;
+    public bool DebugMode;
         
     private State _currentState;
     private State _previousState;
-    private Dictionary<string, State> _states = new Dictionary<string, State>();
+    private Dictionary<string, State> _states = new();
         
     /// <summary>
     /// 状态数据字典，用于在状态间传递数据
     /// </summary>
-    public Dictionary<string, object> StateData { get; private set; } = new Dictionary<string, object>();
+    public Dictionary<string, object> StateData { get; private set; } = new();
         
     /// <summary>
     /// 日志帮助类实例
@@ -80,17 +85,17 @@ public partial class StateMachine : Node
         
     public override void _Process(double delta)
     {
-        _currentState?.Update(delta);
+        _currentState.Update(delta);
     }
         
     public override void _PhysicsProcess(double delta)
     {
-        _currentState?.PhysicsUpdate(delta);
+        _currentState.PhysicsUpdate(delta);
     }
         
     public override void _UnhandledInput(InputEvent @event)
     {
-        _currentState?.HandleInput(@event);
+        _currentState.HandleInput(@event);
     }
         
     /// <summary>
@@ -128,7 +133,7 @@ public partial class StateMachine : Node
     /// <param name="stateName">状态名称</param>
     public void ChangeState(string stateName)
     {
-        if (_states.TryGetValue(stateName, out State state))
+        if (_states.TryGetValue(stateName, out var state))
         {
             ChangeState(state);
         }
@@ -180,7 +185,7 @@ public partial class StateMachine : Node
     /// <returns>状态对象，如果不存在则返回null</returns>
     public State GetState(string stateName)
     {
-        return _states.TryGetValue(stateName, out State state) ? state : null;
+        return _states.TryGetValue(stateName, out var state) ? state : null;
     }
         
     /// <summary>

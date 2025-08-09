@@ -6,10 +6,16 @@
   <ItemGroup>
     <Compile Remove="CommonSDK\**" />
     <Compile Remove="MyMod\**" />
+    <Compile Remove="MyMod2\**" />
+    <Compile Remove="TheMixinMod\**" />
+    <Compile Remove="TheModBeMixined\**" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Remove="CommonSDK\**" />
     <EmbeddedResource Remove="MyMod\**" />
+    <EmbeddedResource Remove="MyMod2\**" />
+    <EmbeddedResource Remove="TheMixinMod\**" />
+    <EmbeddedResource Remove="TheModBeMixined\**" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="CommonSDK\CommonSDK.csproj" />

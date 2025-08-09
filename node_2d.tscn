@@ -1,7 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://bxiu5vm6uyfi5"]
+[gd_scene load_steps=2 format=3 uid="uid://bxiu5vm6uyfi5"]
 
 [ext_resource type="Script" uid="uid://c62ntcbrnoh5b" path="res://ModLoader.cs" id="1_wtcfe"]
-[ext_resource type="Script" uid="uid://bk1sv1u7k7av4" path="res://Game.cs" id="3_epypp"]
 
 [node name="NNNNN" type="Node"]
 script = ExtResource("1_wtcfe")
@@ -11,7 +10,6 @@ script = ExtResource("1_wtcfe")
 [node name="dsf" type="Node" parent="Node"]
 
 [node name="Node2" type="Node" parent="."]
-script = ExtResource("3_epypp")
 
 [node name="Control" type="Control" parent="."]
 layout_mode = 3
