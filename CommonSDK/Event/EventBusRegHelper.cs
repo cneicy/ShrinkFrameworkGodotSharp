@@ -86,9 +86,10 @@ public static class EventBusRegHelper
                         var attributes = method.GetCustomAttributes(typeof(EventSubscribeAttribute), false);
                         if (attributes.Length == 0) continue;
 
-                        // 获取优先级
                         var subscribeAttr = (EventSubscribeAttribute)attributes[0];
                         var priority = subscribeAttr.Priority;
+                        var numericPriority = subscribeAttr.NumericPriority;
+                        var receiveCanceled = subscribeAttr.ReceiveCanceled;
 
                         var parameters = method.GetParameters();
 
@@ -118,11 +119,11 @@ public static class EventBusRegHelper
                                 var funcType = typeof(Func<,>).MakeGenericType(parameterType, typeof(Task));
                                 var handlerDelegate = Delegate.CreateDelegate(funcType, method);
 
-                                EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority, 
-                                    $"Static {type.Name}.{method.Name} (Async, Priority: {priority})");
+                                EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority, numericPriority, receiveCanceled,
+                                    $"Static {type.Name}.{method.Name} (Async, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})");
                                 
                                 if (OS.IsDebugBuild())
-                                    EventBus.Logger.LogInfo($"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority})");
+                                    EventBus.Logger.LogInfo($"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority}({numericPriority}))");
                             }
                             else if (method.ReturnType == typeof(void))
                             {
@@ -130,11 +131,11 @@ public static class EventBusRegHelper
                                 var actionDelegate = Delegate.CreateDelegate(actionType, method);
 
                                 var wrappedHandler = WrapSyncHandler(parameterType, actionDelegate);
-                                EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, 
-                                    $"Static {type.Name}.{method.Name} (Sync, Priority: {priority})");
+                                EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, numericPriority, receiveCanceled,
+                                    $"Static {type.Name}.{method.Name} (Sync, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})");
                                 
                                 if (OS.IsDebugBuild())
-                                    EventBus.Logger.LogInfo($"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority})");
+                                    EventBus.Logger.LogInfo($"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority}({numericPriority}))");
                             }
                             else
                             {
@@ -191,12 +192,12 @@ public static class EventBusRegHelper
             var attributes = method.GetCustomAttributes(typeof(EventSubscribeAttribute), false);
             if (attributes.Length == 0) continue;
 
-            // 跳过静态方法，因为它们已经在静态注册阶段处理过了
             if (method.IsStatic) continue;
 
-            // 获取优先级
             var subscribeAttr = (EventSubscribeAttribute)attributes[0];
             var priority = subscribeAttr.Priority;
+            var numericPriority = subscribeAttr.NumericPriority;
+            var receiveCanceled = subscribeAttr.ReceiveCanceled;
 
             var parameters = method.GetParameters();
 
@@ -226,8 +227,8 @@ public static class EventBusRegHelper
                     var funcType = typeof(Func<,>).MakeGenericType(parameterType, typeof(Task));
                     var handlerDelegate = Delegate.CreateDelegate(funcType, target, method);
                     
-                    EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority, 
-                        $"Instance {type.Name}.{method.Name} (Async, Priority: {priority})");
+                    EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority, numericPriority, receiveCanceled,
+                        $"Instance {type.Name}.{method.Name} (Async, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})");
                 }
                 else if (method.ReturnType == typeof(void))
                 {
@@ -235,8 +236,8 @@ public static class EventBusRegHelper
                     var actionDelegate = Delegate.CreateDelegate(actionType, target, method);
 
                     var wrappedHandler = WrapSyncHandler(parameterType, actionDelegate);
-                    EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, 
-                        $"Instance {type.Name}.{method.Name} (Sync, Priority: {priority})");
+                    EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, numericPriority, receiveCanceled,
+                        $"Instance {type.Name}.{method.Name} (Sync, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})");
                 }
             }
             catch (Exception ex)

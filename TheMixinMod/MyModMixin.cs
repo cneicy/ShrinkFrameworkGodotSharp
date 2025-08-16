@@ -56,13 +56,46 @@ public static class MyModMixin
     {
         var loopTimeField = typeof(TheModBeMixined.TheModBeMixined).GetField("_loopTime",
             BindingFlags.NonPublic | BindingFlags.Instance);
+        var eventCounterField = typeof(TheModBeMixined.TheModBeMixined).GetField("_eventCounter",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+            
         var loopTime = (int)loopTimeField.GetValue(__instance)!;
+        var eventCounter = (int)eventCounterField.GetValue(__instance)!;
+        
         if (loopTime <= -10)
         {
             return;
         }
 
-        EventBus.TriggerEvent(new TestEvent());
+        // 创建测试事件
+        var testEvent = new TestEvent 
+        { 
+            Message = $"Mixin触发事件 #{eventCounter}",
+            Counter = eventCounter
+        };
+        
+        TheMixinMod.Logger.LogInfo($"[MIXIN] 准备触发事件: {testEvent.Message}");
+        
+        // 触发事件
+        EventBus.TriggerEvent(testEvent);
+        
+        // 检查事件处理结果
+        if (testEvent.IsCanceled)
+        {
+            TheMixinMod.Logger.LogInfo($"[MIXIN] 事件被取消，跳过后续处理: {testEvent.Message}");
+        }
+        else
+        {
+            TheMixinMod.Logger.LogInfo($"[MIXIN] 事件处理完成，继续后续操作: {testEvent.Message}");
+            // 只有在事件未被取消时才执行某些操作
+            DoSomeImportantWork();
+        }
+        
         loopTimeField.SetValue(__instance, loopTime - 1);
+        eventCounterField.SetValue(__instance, eventCounter + 1);
+    }
+    private static void DoSomeImportantWork()
+    {
+        TheMixinMod.Logger.LogInfo("[MIXIN] 执行重要工作...");
     }
 }
