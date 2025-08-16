@@ -119,23 +119,32 @@ public static class EventBusRegHelper
                                 var funcType = typeof(Func<,>).MakeGenericType(parameterType, typeof(Task));
                                 var handlerDelegate = Delegate.CreateDelegate(funcType, method);
 
-                                EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority, numericPriority, receiveCanceled,
-                                    $"Static {type.Name}.{method.Name} (Async, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})");
-                                
+                                // 传递原始方法信息
+                                EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority,
+                                    numericPriority, receiveCanceled,
+                                    $"Static {type.Name}.{method.Name} (Async, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})",
+                                    method);
+
                                 if (OS.IsDebugBuild())
-                                    EventBus.Logger.LogInfo($"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority}({numericPriority}))");
+                                    EventBus.Logger.LogInfo(
+                                        $"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority}({numericPriority}))");
                             }
                             else if (method.ReturnType == typeof(void))
                             {
                                 var actionType = typeof(Action<>).MakeGenericType(parameterType);
                                 var actionDelegate = Delegate.CreateDelegate(actionType, method);
 
-                                var wrappedHandler = WrapSyncHandler(parameterType, actionDelegate);
-                                EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, numericPriority, receiveCanceled,
-                                    $"Static {type.Name}.{method.Name} (Sync, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})");
-                                
+                                // 使用新的包装方法，传递原始方法信息
+                                var wrappedHandler =
+                                    WrapSyncHandlerWithMethodInfo(parameterType, actionDelegate, method);
+                                EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, numericPriority,
+                                    receiveCanceled,
+                                    $"Static {type.Name}.{method.Name} (Sync, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})",
+                                    method);
+
                                 if (OS.IsDebugBuild())
-                                    EventBus.Logger.LogInfo($"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority}({numericPriority}))");
+                                    EventBus.Logger.LogInfo(
+                                        $"自动注册静态事件: {parameterType.FullName} -> {type.Name}.{method.Name} (优先级: {priority}({numericPriority}))");
                             }
                             else
                             {
@@ -147,7 +156,8 @@ public static class EventBusRegHelper
                         catch (Exception ex)
                         {
                             if (OS.IsDebugBuild())
-                                EventBus.Logger.LogError($"为静态事件 {parameterType.FullName} 创建委托给方法 {method.Name} 失败: {ex}");
+                                EventBus.Logger.LogError(
+                                    $"为静态事件 {parameterType.FullName} 创建委托给方法 {method.Name} 失败: {ex}");
                         }
                     }
                 }
@@ -181,7 +191,7 @@ public static class EventBusRegHelper
     private static void RegisterEventHandlersWithReflection(object target)
     {
         var type = target.GetType();
-        
+
         var classAttributes = type.GetCustomAttributes(typeof(EventBusSubscriberAttribute), false);
         if (classAttributes.Length == 0) return;
 
@@ -226,24 +236,143 @@ public static class EventBusRegHelper
                 {
                     var funcType = typeof(Func<,>).MakeGenericType(parameterType, typeof(Task));
                     var handlerDelegate = Delegate.CreateDelegate(funcType, target, method);
-                    
-                    EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority, numericPriority, receiveCanceled,
-                        $"Instance {type.Name}.{method.Name} (Async, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})");
+
+                    // 传递原始方法信息
+                    EventBus.RegisterEventInternal(parameterType, handlerDelegate, priority, numericPriority,
+                        receiveCanceled,
+                        $"Instance {type.Name}.{method.Name} (Async, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})",
+                        method);
                 }
                 else if (method.ReturnType == typeof(void))
                 {
                     var actionType = typeof(Action<>).MakeGenericType(parameterType);
                     var actionDelegate = Delegate.CreateDelegate(actionType, target, method);
 
-                    var wrappedHandler = WrapSyncHandler(parameterType, actionDelegate);
-                    EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, numericPriority, receiveCanceled,
-                        $"Instance {type.Name}.{method.Name} (Sync, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})");
+                    // 使用新的包装方法，传递原始方法信息
+                    var wrappedHandler = WrapSyncHandlerWithMethodInfo(parameterType, actionDelegate, method);
+                    EventBus.RegisterEventInternal(parameterType, wrappedHandler, priority, numericPriority,
+                        receiveCanceled,
+                        $"Instance {type.Name}.{method.Name} (Sync, Priority: {priority}({numericPriority}), ReceiveCanceled: {receiveCanceled})",
+                        method);
                 }
             }
             catch (Exception ex)
             {
                 if (OS.IsDebugBuild())
                     EventBus.Logger.LogError($"为事件 {parameterType.FullName} 创建委托给方法 {method.Name} 失败: {ex}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 将同步处理程序包装为异步版本（保留原始方法信息）
+    /// </summary>
+    /// <param name="eventType">事件类型</param>
+    /// <param name="syncHandler">同步处理程序委托</param>
+    /// <param name="originalMethod">原始方法信息</param>
+    /// <returns>包装后的异步处理程序委托</returns>
+    /// <remarks>
+    /// <para>使用泛型方法和自定义包装器保留原始方法信息</para>
+    /// <para>解决了编译器生成匿名方法导致调试信息丢失的问题</para>
+    /// <para>确保EventBus内部统一使用异步委托，简化处理逻辑</para>
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">当无法找到WrapActionWithMethodInfo方法时抛出</exception>
+    private static Delegate WrapSyncHandlerWithMethodInfo(Type eventType, Delegate syncHandler,
+        MethodInfo originalMethod)
+    {
+        var method = typeof(EventBusRegHelper)
+            .GetMethod(nameof(WrapActionWithMethodInfo), BindingFlags.NonPublic | BindingFlags.Static)
+            ?.MakeGenericMethod(eventType);
+
+        if (method == null)
+        {
+            throw new InvalidOperationException("无法找到WrapActionWithMethodInfo方法");
+        }
+
+        return (Delegate)method.Invoke(null, [syncHandler, originalMethod])!;
+    }
+
+    /// <summary>
+    /// 创建一个保留原始方法信息的包装器
+    /// </summary>
+    /// <typeparam name="T">事件类型参数</typeparam>
+    /// <param name="actionDelegate">要包装的Action委托</param>
+    /// <param name="originalMethod">原始方法信息</param>
+    /// <returns>包装后的Func&lt;T, Task&gt;委托</returns>
+    /// <remarks>
+    /// <para>创建专用的包装器实例，保存原始方法信息以供调试使用</para>
+    /// <para>包装器实现了异步接口，但内部调用同步方法</para>
+    /// <para>保证同步方法的异常被正确传播到异步上下文</para>
+    /// </remarks>
+    private static Func<T, Task> WrapActionWithMethodInfo<T>(Delegate actionDelegate, MethodInfo originalMethod)
+    {
+        var typedAction = (Action<T>)actionDelegate;
+
+        // 创建一个新的委托，其中包含原始方法信息
+        var wrapper = new MethodInfoPreservingWrapper<T>(typedAction, originalMethod);
+        return wrapper.ExecuteAsync;
+    }
+
+    /// <summary>
+    /// 保留方法信息的包装器类
+    /// </summary>
+    /// <typeparam name="T">事件类型参数</typeparam>
+    /// <remarks>
+    /// <para>专门用于保存原始方法信息的包装器类</para>
+    /// <para>通过属性暴露原始方法信息，供EventHandlerInfo提取使用</para>
+    /// <para>提供异步执行接口，但内部调用同步方法</para>
+    /// <para>确保异常处理的一致性</para>
+    /// </remarks>
+    private class MethodInfoPreservingWrapper<T>
+    {
+        /// <summary>
+        /// 原始的同步Action委托
+        /// </summary>
+        private readonly Action<T> _originalAction;
+
+        /// <summary>
+        /// 原始方法信息
+        /// </summary>
+        private readonly MethodInfo _originalMethod;
+
+        /// <summary>
+        /// 初始化 <see cref="MethodInfoPreservingWrapper{T}"/> 类的新实例
+        /// </summary>
+        /// <param name="originalAction">原始的同步Action委托</param>
+        /// <param name="originalMethod">原始方法信息</param>
+        public MethodInfoPreservingWrapper(Action<T> originalAction, MethodInfo originalMethod)
+        {
+            _originalAction = originalAction;
+            _originalMethod = originalMethod;
+        }
+
+        /// <summary>
+        /// 获取原始方法信息
+        /// </summary>
+        /// <value>被包装的原始方法的MethodInfo</value>
+        /// <remarks>此属性供EventHandlerInfo通过反射提取原始方法信息</remarks>
+        public MethodInfo OriginalMethod => _originalMethod;
+
+        /// <summary>
+        /// 异步执行原始的同步方法
+        /// </summary>
+        /// <param name="arg">事件参数</param>
+        /// <returns>表示异步操作的Task</returns>
+        /// <remarks>
+        /// <para>将同步方法的执行包装为异步操作</para>
+        /// <para>对于成功执行的情况，返回已完成的Task</para>
+        /// <para>对于异常情况，创建包含异常信息的Task</para>
+        /// </remarks>
+        public Task ExecuteAsync(T arg)
+        {
+            try
+            {
+                _originalAction(arg);
+                return Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                return Task.FromException(ex);
             }
         }
     }
@@ -266,12 +395,12 @@ public static class EventBusRegHelper
         var method = typeof(EventBusRegHelper)
             .GetMethod(nameof(WrapAction), BindingFlags.NonPublic | BindingFlags.Static)
             ?.MakeGenericMethod(eventType);
-        
+
         if (method == null)
         {
             throw new InvalidOperationException("无法找到WrapAction方法");
         }
-        
+
         return (Delegate)method.Invoke(null, [syncHandler])!;
     }
 

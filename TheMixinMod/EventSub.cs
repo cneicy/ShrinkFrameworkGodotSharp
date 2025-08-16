@@ -21,15 +21,13 @@ public partial class EventSub : Node
         
         foreach (var subscriber in subscribers)
         {
-            TheMixinMod.Logger.LogInfo($"订阅者: {subscriber.DeclaringType?.Name}.{subscriber.MethodName} (优先级: {subscriber.Priority})");
+            TheMixinMod.Logger.LogInfo($"订阅者: {subscriber.DeclaringType.Name}.{subscriber.MethodName} (优先级: {subscriber.Priority})");
         }
 
         // 可以取消事件
-        if (testEvent.Counter % 2 == 0)
-        {
-            testEvent.SetCanceled(true);
-            TheMixinMod.Logger.LogInfo("事件被取消");
-        }
+        if (testEvent.Counter % 2 != 0) return;
+        testEvent.SetCanceled(true);
+        TheMixinMod.Logger.LogInfo("事件被取消");
     }
 
     [EventSubscribe(EventPriority.MONITOR, receiveCanceled: true)]

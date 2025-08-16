@@ -62,7 +62,7 @@ public static class MyModMixin
         var loopTime = (int)loopTimeField.GetValue(__instance)!;
         var eventCounter = (int)eventCounterField.GetValue(__instance)!;
         
-        if (loopTime <= -10)
+        if (loopTime <= 2)
         {
             return;
         }
