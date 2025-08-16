@@ -7,4 +7,4 @@ Godot自用脚手架
 ## Todo
 - [ ] 使用Roslyn或SourceGenerator代替事件总线的反射。
 - [x] 使用Extension重写FindUtils。
-- [ ] 事件总线的事件阶段。
+- [x] 事件总线的事件阶段。
