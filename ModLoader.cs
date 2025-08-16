@@ -311,6 +311,7 @@ public partial class ModLoader : Node
                 if (alc == null) return;
 
                 var assembly = await Task.Run(() => alc.LoadFromAssemblyPath(dllFile));
+                Godot.Bridge.ScriptManagerBridge.LookupScriptsInAssembly(assembly);
                 await ProcessAssemblyTypesAsync(assembly, metadata);
             }
             catch (Exception ex)
