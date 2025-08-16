@@ -13,12 +13,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="BehaviorTree\README.md" />
       <Content Include="Data\README.md" />
       <Content Include="Event\README.md" />
       <Content Include="Logger\README.md" />
       <Content Include="Pool\README.md" />
-      <Content Include="StateMachine\README.md" />
       <Content Include="Utils\README-F.md" />
       <Content Include="Utils\READMEV.md" />
     </ItemGroup>
